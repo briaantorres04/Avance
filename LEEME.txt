@@ -1,0 +1,10 @@
+EVALUACIÓN DE ISOMÉTRICOS POR ALINEAR - versión instalable (funciona sin internet)
+
+1) Publicar la carpeta una sola vez en un sitio web con https (por ejemplo GitHub Pages o Netlify, o con tu área de TI).
+   La carpeta NO contiene datos de la planta; solo el programa. Los datos se cargan desde tu Excel y se quedan en cada dispositivo.
+2) En el celular o la tablet, abre el enlace con internet y usa "Añadir a pantalla de inicio" (iPhone: Safari > Compartir; Android: Chrome > Instalar app).
+3) Toca "Cargar avance" y elige el Excel del avance de montaje (hoja Alineacion). Listo: ya funciona sin conexión.
+4) Para actualizar los datos: con el Excel nuevo, toca "Cargar avance" otra vez. Las evaluaciones guardadas se conservan.
+5) Para actualizar el programa: se actualiza solo la siguiente vez que abras la app con internet.
+6) "Guardar en Excel" descarga o comparte el registro. "Importar" fusiona el Excel de otro supervisor (gana la evaluación más reciente).
+Recomendación: guarda el Excel al terminar cada turno; las evaluaciones viven en el navegador del dispositivo.
