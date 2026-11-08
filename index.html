@@ -28,7 +28,7 @@
   --tx-muted: #8b9e91;
   --tx-dim: #5c6d62;
 
-  --accent: #d4f542;       /* Chartreuse / Lima de seguridad */
+  --accent: #d4f542;
   --accent-hover: #bde02f;
   --tx-on-accent: #0c120e;
 
@@ -48,7 +48,7 @@
 }
 
 :root[data-theme="light"] {
-  /* PALETA MODO SOL (Alto contraste para trabajo bajo luz solar directa) */
+  /* PALETA MODO SOL (Alto contraste para obra bajo sol directo) */
   --bg: #eaedea;
   --surface: #ffffff;
   --surface-alt: #f1f4f0;
@@ -127,7 +127,6 @@ header {
   letter-spacing: 0.05em;
 }
 
-/* NAVEGACIÓN Y ACCIONES */
 .nav-group {
   display: flex;
   align-items: center;
@@ -198,6 +197,27 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--accent);
 }
 
+/* COMPLEJIDAD SELECTOR SEGMENTADO */
+.cmplx-group {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.cmplx-btn {
+  flex: 1;
+  padding: 8px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--tx-muted);
+}
+.cmplx-btn.active[data-c="Baja"] { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
+.cmplx-btn.active[data-c="Media"] { background: var(--wa-bg); color: var(--wa); border-color: var(--wa); }
+.cmplx-btn.active[data-c="Alta"] { background: var(--er-bg); color: var(--er); border-color: var(--er); }
+.cmplx-btn.active[data-c="Crítica"] { background: var(--accent); color: var(--tx-on-accent); border-color: var(--accent); }
+
 /* LAYOUT PRINCIPAL */
 main {
   padding: 16px 20px;
@@ -214,14 +234,12 @@ main {
   .g { grid-template-columns: 1fr; }
 }
 
-/* CONTENEDORES Y TARJETAS */
 .c {
   background: var(--surface);
   border: 1px solid var(--border);
   padding: 16px;
 }
 
-/* LISTA DE ISOMÉTRICOS */
 .li {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
@@ -251,7 +269,6 @@ main {
   margin-top: 10px;
 }
 
-/* MARBETES / BADGES EDITORIALES */
 .b {
   display: inline-block;
   padding: 3px 8px;
@@ -268,7 +285,6 @@ main {
 .bl { color: var(--bl); background: var(--bl-bg); }
 .mu { color: var(--tx-muted); }
 
-/* GRID DE FICHA TÉCNICA DEL ISOMÉTRICO */
 .iso-header-box {
   background: var(--surface-alt);
   border: 1px solid var(--border-strong);
@@ -292,8 +308,7 @@ main {
 }
 .iso-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  divide-x: 1px solid var(--border);
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
 }
 .iso-stat-cell {
   padding: 10px 14px;
@@ -315,7 +330,6 @@ main {
   color: var(--tx-main);
 }
 
-/* PREGUNTAS Y BOTONES SÍ / NO */
 .q {
   font-size: 16px;
   font-weight: 800;
@@ -342,7 +356,6 @@ main {
 }
 .yn button:first-child:hover { background: var(--accent-hover); }
 
-/* DASHBOARD KPIS */
 .kp {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -375,7 +388,6 @@ main {
   letter-spacing: -0.03em;
 }
 
-/* BARRAS DE PROGRESO / COMPARATIVAS */
 .bar {
   display: flex;
   align-items: center;
@@ -389,7 +401,6 @@ main {
   min-width: 2px;
 }
 
-/* TABLAS ESTILO PLANILLA TÉCNICA */
 .tw {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -464,7 +475,6 @@ details summary {
 let D=[],info='',pf='',sf='',AL=3,EQ=[],QD=[],pa=null,pd='',SP={},spi='';
 const K='evalAlin1';let S={},sup='';
 
-/* Gestión de Tema: Modo Sol vs Modo Sombra */
 function initTheme(){
   const saved = localStorage.getItem(K+'_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
@@ -538,6 +548,7 @@ function res(a){
 }
 
 const CL={'Trabajable':'ok','No alineable, Línea incompleta':'er','Trabajado':'bl','Liberado':'ok','No alineable por falta de material':'er','Pendiente por andamio':'wa','Pendiente solicitud de andamio':'wa','Requiere otro medio de acceso':'bl'};
+const CMPLX_COLORS={'Baja':'ok','Media':'wa','Alta':'er','Crítica':'p'};
 
 const QT={
  mont:['¿El isométrico está montado completo?','Confirma en campo que todos sus spools estén montados. Si falta alguno, queda como No alineable, Línea incompleta.'],
@@ -551,8 +562,18 @@ const QT={
 
 function ans(k,v){a[k]=v;a.h.push(k);draw()}
 function back(){const k=a.h.pop();if(k)FL[k].forEach(f=>delete a[f]);draw()}
-function nw(){a={h:[]};draw()}
-function pick(i){cur=D[i];a=S[cur.iso]?null:{h:[]};msg='';draw()}
+function nw(){a={h:[],cmplx:(S[cur.iso]&&S[cur.iso].cmplx)||'Media'};draw()}
+function pick(i){cur=D[i];a=S[cur.iso]?null:{h:[],cmplx:'Media'};msg='';draw()}
+
+function setCmplx(val){
+ if(a){ a.cmplx=val; draw(); }
+ else if(cur && S[cur.iso]){
+   S[cur.iso].cmplx=val;
+   lg(S[cur.iso],'Complejidad cambiada a '+val);
+   sv(); draw();
+ }
+}
+
 function done(k,fields){
  for(const f of fields){const v=$('f_'+f).value.trim();if(v)a[f]=v;else if(f!=='fsol'&&f!=='mtipo'){return}}
  if(k==='nand'&&!(+a.nand>0)){delete a.nand;return}
@@ -603,19 +624,29 @@ function ext(s){
 function guardar(){
  if(!sup){msg='Escribe el nombre de supervisor.';draw();return}
  const r=res(a);const o=S[cur.iso]||{};
- S[cur.iso]={...a,res:r,sup,fecha:hoy(),pl:cur.pl,un:cur.un,pr:cur.pr,sp:cur.sp,mt:cur.mt,nota:o.nota,hist:o.hist};
- lg(S[cur.iso],'Evaluado: '+r);
+ S[cur.iso]={...a,res:r,sup,fecha:hoy(),pl:cur.pl,un:cur.un,pr:cur.pr,sp:cur.sp,mt:cur.mt,cmplx:a.cmplx||'Media',nota:o.nota,hist:o.hist};
+ lg(S[cur.iso],'Evaluado: '+r+' · Complejidad: '+(a.cmplx||'Media'));
  sv();a=null;msg='Evaluación guardada con éxito.';draw();
 }
 
 function panel(){
  if(!cur)return'<div class="c mu" style="text-align:center;padding:40px 20px">'+(D.length?'Selecciona un isométrico de la lista lateral para iniciar la evaluación técnica.':'Sin datos cargados. Usa "Cargar Avance" para importar el archivo Excel.')+'</div>';
  
+ const curCmplx = a ? (a.cmplx || 'Media') : ((S[cur.iso] && S[cur.iso].cmplx) || 'Media');
+ 
  let h='<div class="iso-header-box"><div class="iso-title-row"><span class="code">'+esc(cur.iso)+'</span><span class="mu">'+esc(cur.pl)+' · UNIDAD '+esc(cur.un)+'</span></div>';
- h+='<div class="iso-stats-grid"><div class="iso-stat-cell"><span>Prioridad</span><b>'+esc(cur.pr)+'</b></div><div class="iso-stat-cell"><span>Spools</span><b>'+cur.sp+' pzas</b></div><div class="iso-stat-cell"><span>Longitud</span><b>'+cur.mt+' m</b></div><div class="iso-stat-cell"><span>Últ. Montaje</span><b>'+dias(cur)+' días</b></div></div></div>';
+ h+='<div class="iso-stats-grid"><div class="iso-stat-cell"><span>Prioridad</span><b>'+esc(cur.pr)+'</b></div><div class="iso-stat-cell"><span>Complejidad</span><b style="color:var(--accent)">'+esc(curCmplx)+'</b></div><div class="iso-stat-cell"><span>Spools</span><b>'+cur.sp+' pzas</b></div><div class="iso-stat-cell"><span>Longitud</span><b>'+cur.mt+' m</b></div><div class="iso-stat-cell"><span>Últ. Montaje</span><b>'+dias(cur)+' días</b></div></div></div>';
  
  h+='<div class="c">';
  h+='<div class="f" style="margin-top:0"><div><small class="mu" style="font-weight:700;text-transform:uppercase;font-size:10px">Supervisor a cargo</small><input id="sup" value="'+esc(sup)+'" placeholder="Nombre del supervisor" oninput="sup=this.value;sv()"></div></div>';
+
+ /* Nivel de Complejidad técnico */
+ h+='<div style="margin:12px 0"><small class="mu" style="font-weight:700;text-transform:uppercase;font-size:10px">Nivel de Complejidad Técnico</small><div class="cmplx-group">';
+ ['Baja','Media','Alta','Crítica'].forEach(lvl=>{
+   const act = curCmplx === lvl ? 'active' : '';
+   h+='<button type="button" class="cmplx-btn '+act+'" data-c="'+lvl+'" onclick="setCmplx(\''+lvl+'\')">'+lvl+'</button>';
+ });
+ h+='</div></div>';
  
  if(msg)h+='<div style="padding:8px 12px;margin:10px 0;border:1px solid currentColor" class="'+(msg.includes('éxito')||msg.includes('actualizado')?'ok':'er')+'">'+esc(msg)+'</div>';
  
@@ -623,14 +654,14 @@ function panel(){
 
  const s=S[cur.iso];
  if(s&&!a){
-   h+='<div style="margin:14px 0 8px"><span class="b '+CL[ef(s)]+'" style="font-size:13px;padding:4px 10px">'+esc(ef(s))+'</span></div><p class="mu" style="font-size:12px;margin-bottom:14px">Evaluado por '+esc(s.sup)+' el '+s.fecha+'.</p>'+det(s)+ext(s)+'<div class="yn" style="margin-top:14px"><button onclick="est(\'Trabajado\')">Marcar Trabajado</button><button class="p" onclick="est(\'Liberado\')">Marcar Liberado</button></div>'+(s.est?'<button style="width:100%;margin-bottom:8px" onclick="est(\'back\')">Quitar avance</button>':'')+'<button style="width:100%" onclick="nw()">Reevaluar Isométrico</button>';
+   h+='<div style="margin:14px 0 8px"><span class="b '+CL[ef(s)]+'" style="font-size:13px;padding:4px 10px">'+esc(ef(s))+'</span> <span class="b '+({'Baja':'ok','Media':'wa','Alta':'er','Crítica':'er'}[s.cmplx||'Media'])+'" style="font-size:13px;padding:4px 10px">Complejidad: '+esc(s.cmplx||'Media')+'</span></div><p class="mu" style="font-size:12px;margin-bottom:14px">Evaluado por '+esc(s.sup)+' el '+s.fecha+'.</p>'+det(s)+ext(s)+'<div class="yn" style="margin-top:14px"><button onclick="est(\'Trabajado\')">Marcar Trabajado</button><button class="p" onclick="est(\'Liberado\')">Marcar Liberado</button></div>'+(s.est?'<button style="width:100%;margin-bottom:8px" onclick="est(\'back\')">Quitar avance</button>':'')+'<button style="width:100%" onclick="nw()">Reevaluar Isométrico</button>';
    return h+'</div>';
  }
 
  const k=nq(a);
  if(k===null){
    const r=res(a);
-   h+='<div class="q">Resultado de la evaluación</div><div style="margin:8px 0 14px"><span class="b '+CL[r]+'" style="font-size:14px;padding:4px 12px">'+esc(r)+'</span></div>'+det(a)+'<div class="yn"><button onclick="back()">Atrás</button><button class="p" onclick="guardar()">Guardar Evaluación</button></div>';
+   h+='<div class="q">Resultado de la evaluación</div><div style="margin:8px 0 14px"><span class="b '+CL[r]+'" style="font-size:14px;padding:4px 12px">'+esc(r)+'</span> <span class="b '+({'Baja':'ok','Media':'wa','Alta':'er','Crítica':'er'}[a.cmplx||'Media'])+'" style="font-size:14px;padding:4px 12px">Complejidad: '+esc(a.cmplx||'Media')+'</span></div>'+det(a)+'<div class="yn"><button onclick="back()">Atrás</button><button class="p" onclick="guardar()">Guardar Evaluación</button></div>';
  } else if(QT[k]){
    h+='<div class="q">'+QT[k][0]+'</div><div class="mu" style="font-size:12px;margin-bottom:10px">'+QT[k][1]+'</div>'+hint(k);
    if(k==='man')h+='<div class="f"><div><small class="mu">Tipo de maniobra requerida</small><select id="f_mtipo"><option value=""></option><option>Manual</option><option>Grúa</option><option>Manual y grúa</option></select></div></div>';
@@ -646,7 +677,7 @@ function panel(){
 }
 
 function det(s){
- const r=[['Montado completo',s.mont],['En coordenada',s.coord],['Maniobra',s.man?(s.man+(s.mtipo?' ('+s.mtipo+')':'')):'—'],['Requiere soporte',s.sop],['Soporte / material',s.mat||'—'],['Descripción del soporte',s.desc||'—'],['Plataforma o nivel de piso',s.plat||'—'],['Andamio',s.and?(s.and+(s.nand?' · '+s.nand+' pza(s)':'')+(s.fsol?' · solicitado '+s.fsol:'')):'—'],['Otro medio de acceso',s.otro||'—'],['Fecha trabajado',s.ftrab],['Fecha liberado',s.flib]];
+ const r=[['Montado completo',s.mont],['En coordenada',s.coord],['Complejidad',s.cmplx||'Media'],['Maniobra',s.man?(s.man+(s.mtipo?' ('+s.mtipo+')':'')):'—'],['Requiere soporte',s.sop],['Soporte / material',s.mat||'—'],['Descripción del soporte',s.desc||'—'],['Plataforma o nivel de piso',s.plat||'—'],['Andamio',s.and?(s.and+(s.nand?' · '+s.nand+' pza(s)':'')+(s.fsol?' · solicitado '+s.fsol:'')):'—'],['Otro medio de acceso',s.otro||'—'],['Fecha trabajado',s.ftrab],['Fecha liberado',s.flib]];
  return'<div class="tw"><table>'+r.map(x=>'<tr><th style="width:38%">'+x[0]+'</th><td style="white-space:normal">'+esc(x[1]||'—')+'</td></tr>').join('')+'</table></div>';
 }
 
@@ -663,7 +694,7 @@ function lista(){
 function rows(L){
  return L.slice(0,300).map(([r,i])=>{
    const s=S[r.iso];
-   return'<div class="li'+(cur&&cur.iso===r.iso?' s':'')+'" onclick="pick('+i+')"><b>'+esc(r.iso)+'</b><br><small>'+esc(r.pr)+' · '+r.mt+' m · '+dias(r)+' d'+(s?' · <span class="'+CL[ef(s)]+'">'+esc(ef(s))+'</span>':'')+(s&&s.res==='Pendiente solicitud de andamio'&&dEv(s)>=AL?' <span class="er">⚠ '+dEv(s)+' d</span>':'')+'</small></div>';
+   return'<div class="li'+(cur&&cur.iso===r.iso?' s':'')+'" onclick="pick('+i+')"><b>'+esc(r.iso)+'</b><br><small>'+esc(r.pr)+' · '+(s&&s.cmplx?s.cmplx+' · ':'')+r.mt+' m · '+dias(r)+' d'+(s?' · <span class="'+CL[ef(s)]+'">'+esc(ef(s))+'</span>':'')+(s&&s.res==='Pendiente solicitud de andamio'&&dEv(s)>=AL?' <span class="er">⚠ '+dEv(s)+' d</span>':'')+'</small></div>';
  }).join('');
 }
 function lst(){const L=D.map((r,i)=>[r,i]).filter(([r])=>fl(r)&&r.iso.toLowerCase().includes(q.toLowerCase()));$('ls').innerHTML=rows(L)}
@@ -884,7 +915,7 @@ function sblock(iso){
    const e=ex[x[0]];
    return'<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between"><b style="font-family:var(--font-mono)">'+esc(x[0])+'</b><span class="b '+({'Instalado':'wa','Liberado':'ok','Rechazado':'er'}[x[2]]||'mu')+'">'+esc(x[2])+'</span></div><div class="mu" style="font-size:12px;margin:2px 0">'+esc(x[1])+' · '+esc(sdesc(x))+'</div>'+(e?'<div class="er" style="font-size:12px">Excepción registrada: '+esc(e.m)+' ('+e.f+')</div>':'')+(cc[x[0]]?'<div class="mu" style="font-size:12px">Alerta cerrada el '+cc[x[0]].f+(cc[x[0]].n?' · '+esc(cc[x[0]].n):'')+' <button data-i="'+esc(iso)+'" data-c="'+esc(x[0])+'" onclick="reab(this.dataset.i,this.dataset.c)">Reabrir</button></div>':'')+(prog&&!okS(x)?'<button style="margin-top:4px" data-i="'+esc(iso)+'" data-c="'+esc(x[0])+'" onclick="exc(this.dataset.i,this.dataset.c)">'+(e?'Quitar excepción':'Registrar excepción')+'</button>':'')+'</div>';
  }).join('');
- return'<details style="margin:12px 0;border:1px solid var(--border);padding:10px" class="c"><summary><b>Soportaría Asociada</b> <span class="mu">· '+(q.i+q.l)+'/'+q.n+' instalados'+(q.p?' · '+q.p+' pendientes ('+q.conRec+' con material)':'')+(q.r?' · '+q.r+' rechazados':'')+'</span></summary>'+rows+'<small class="mu" style="display:block;margin-top:8px">'+esc(spi)+(a.length>relS(a).length?' · '+(a.length-relS(a).length)+' soportes no requeridos omitidos':'')+'</small></details>';
+ return'<details style="margin:12px 0;border:1px solid var(--border);padding:10px" class="c"><summary><b>Soportería Asociada</b> <span class="mu">· '+(q.i+q.l)+'/'+q.n+' instalados'+(q.p?' · '+q.p+' pendientes ('+q.conRec+' con material)':'')+(q.r?' · '+q.r+' rechazados':'')+'</span></summary>'+rows+'<small class="mu" style="display:block;margin-top:8px">'+esc(spi)+(a.length>relS(a).length?' · '+(a.length-relS(a).length)+' soportes no requeridos omitidos':'')+'</small></details>';
 }
 
 function exc(i,c){
@@ -959,16 +990,16 @@ function guarda(buf,name){
 }
 
 $('ex').onclick=()=>{
- const R=Object.keys(CL),H=['Isométrico','Planta','Unidad','Prioridad','Spools','Metros','Días desde último montaje','Resultado','En coordenada','Requiere maniobra','Tipo de maniobra','Requiere soporte','Soporte en sitio o con material','Descripción del soporte','Plataforma o nivel de piso','Requiere andamio','Núm. de andamios','Fecha solicitud de andamio','Otro medio de acceso','Supervisor','Fecha de evaluación','Nota','Avance','Fecha trabajado','Fecha liberado','Montado completo','Notas','Historial','Última modificación'];
+ const R=Object.keys(CL),H=['Isométrico','Planta','Unidad','Prioridad','Complejidad','Spools','Metros','Días desde último montaje','Resultado','En coordenada','Requiere maniobra','Tipo de maniobra','Requiere soporte','Soporte en sitio o con material','Descripción del soporte','Plataforma o nivel de piso','Requiere andamio','Núm. de andamios','Fecha solicitud de andamio','Otro medio de acceso','Supervisor','Fecha de evaluación','Nota','Avance','Fecha trabajado','Fecha liberado','Montado completo','Notas','Historial','Última modificación'];
  const U=[...V().map(r=>[r,S[r.iso]||{},'']),...Object.keys(S).filter(k=>!D.some(r=>r.iso===k)&&(!pf||S[k].pl===pf)).map(k=>[{iso:k,...S[k],fm:null},S[k],'Ya no es elegible con el último avance'])];
- const A=[H,...U.map(([r,s,n])=>[r.iso,r.pl,r.un,r.pr,r.sp,r.mt,r.fm?dias(r):'',s.res||'Sin evaluar',s.coord||'',s.man||'',s.mtipo||'',s.sop||'',s.mat||'',s.desc||'',s.plat||'',s.and||'',s.nand?+s.nand:'',s.fsol||'',s.otro||'',s.sup||'',s.fecha||'',n,s.est||'',s.ftrab||'',s.flib||'',s.mont||'',s.nota||'',(s.hist||[]).join(' | '),s.fmod||''])];
+ const A=[H,...U.map(([r,s,n])=>[r.iso,r.pl,r.un,r.pr,s.cmplx||'Media',r.sp,r.mt,r.fm?dias(r):'',s.res||'Sin evaluar',s.coord||'',s.man||'',s.mtipo||'',s.sop||'',s.mat||'',s.desc||'',s.plat||'',s.and||'',s.nand?+s.nand:'',s.fsol||'',s.otro||'',s.sup||'',s.fecha||'',n,s.est||'',s.ftrab||'',s.flib||'',s.mont||'',s.nota||'',(s.hist||[]).join(' | '),s.fmod||''])];
  const P=[...new Set(U.map(x=>x[0].pr))].sort(),B=[['Prioridad','Total','Sin evaluar',...R],...P.map(p=>{const x=U.filter(y=>y[0].pr===p);return[p,x.length,x.filter(y=>!y[1].res).length,...R.map(k=>x.filter(y=>ef(y[1])===k).length)]})];
  
  try{
   const w=XLSX.utils.book_new();
-  const s1=XLSX.utils.aoa_to_sheet(A),s2=XLSX.utils.aoa_to_sheet(B),s4=XLSX.utils.aoa_to_sheet([['Fecha','Cuadrilla','Equipo','Isométrico','Unidad','Prioridad','Metros','Estado','Retroalimentación'],...sched().sort((x,y)=>S[x].pfecha.localeCompare(S[y].pfecha)).map(k=>{const x=S[k];return[x.pfecha,x.pcuad||'',eqName(x.peq),k,x.un,x.pr,x.mt,x.pest,x.pnota||'']})]),s5=XLSX.utils.aoa_to_sheet([['Id','Nombre','Tipo','Altura máx. (m)','Estado'],...EQ.map(e=>[e.id,e.nom,e.tipo,e.alt,e.est])]),s6=XLSX.utils.aoa_to_sheet([['Id','Nombre','Turno','Integrantes'],...QD.map(q=>[q.id,q.nom,q.turno,q.n])]),s7=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Descripción','Estado','Días','Material recibido','Excepción (motivo)','Fecha de excepción','Instalado en checklist'],...alertas().map(x=>[x.iso,x.c,x.d,x.est,x.dias,x.rec||'',x.exc?x.exc.m:'',x.exc?x.exc.f:'',x.ok?'Sí':'No'])]),s8=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Motivo','Fecha'],...Object.keys(S).flatMap(k=>Object.keys(S[k].exc||{}).map(c=>[k,c,S[k].exc[c].m,S[k].exc[c].f]))]),s9=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Fecha de cierre','Nota'],...Object.keys(S).flatMap(k=>Object.keys(S[k].cerr||{}).map(c=>[k,c,S[k].cerr[c].f,S[k].cerr[c].n||'']))]),s10=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte asignado'],...Object.keys(S).flatMap(k=>(S[k].sp0||[]).map(c=>[k,c]))]),s3=XLSX.utils.aoa_to_sheet([['Unidad','Isométricos','Metros elegibles','m por trabajar','m trabajados','m liberados'],...mu().map(r=>[r[0],r[1],...r.slice(2).map(v=>Math.round(v*10)/10)])]);
+  const s1=XLSX.utils.aoa_to_sheet(A),s2=XLSX.utils.aoa_to_sheet(B),s4=XLSX.utils.aoa_to_sheet([['Fecha','Cuadrilla','Equipo','Isométrico','Unidad','Prioridad','Complejidad','Metros','Estado','Retroalimentación'],...sched().sort((x,y)=>S[x].pfecha.localeCompare(S[y].pfecha)).map(k=>{const x=S[k];return[x.pfecha,x.pcuad||'',eqName(x.peq),k,x.un,x.pr,x.cmplx||'Media',x.mt,x.pest,x.pnota||'']})]),s5=XLSX.utils.aoa_to_sheet([['Id','Nombre','Tipo','Altura máx. (m)','Estado'],...EQ.map(e=>[e.id,e.nom,e.tipo,e.alt,e.est])]),s6=XLSX.utils.aoa_to_sheet([['Id','Nombre','Turno','Integrantes'],...QD.map(q=>[q.id,q.nom,q.turno,q.n])]),s7=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Descripción','Estado','Días','Material recibido','Excepción (motivo)','Fecha de excepción','Instalado en checklist'],...alertas().map(x=>[x.iso,x.c,x.d,x.est,x.dias,x.rec||'',x.exc?x.exc.m:'',x.exc?x.exc.f:'',x.ok?'Sí':'No'])]),s8=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Motivo','Fecha'],...Object.keys(S).flatMap(k=>Object.keys(S[k].exc||{}).map(c=>[k,c,S[k].exc[c].m,S[k].exc[c].f]))]),s9=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Fecha de cierre','Nota'],...Object.keys(S).flatMap(k=>Object.keys(S[k].cerr||{}).map(c=>[k,c,S[k].cerr[c].f,S[k].cerr[c].n||'']))]),s10=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte asignado'],...Object.keys(S).flatMap(k=>(S[k].sp0||[]).map(c=>[k,c]))]),s3=XLSX.utils.aoa_to_sheet([['Unidad','Isométricos','Metros elegibles','m por trabajar','m trabajados','m liberados'],...mu().map(r=>[r[0],r[1],...r.slice(2).map(v=>Math.round(v*10)/10)])]);
   
-  s1['!cols']=H.map((h,i)=>({wch:i===0?34:i===13||i===18||i===21||i===26||i===27?36:16}));
+  s1['!cols']=H.map((h,i)=>({wch:i===0?34:i===14||i===19||i===22||i===27||i===28?36:16}));
   s2['!cols']=B[0].map(()=>({wch:20}));
   
   XLSX.utils.book_append_sheet(w,s1,'Evaluaciones');
@@ -1008,16 +1039,21 @@ function importar(buf){
  const W=XLSX.read(buf,{type:'array'}),s=W.Sheets['Evaluaciones'];
  if(!s){alert('Hoja "Evaluaciones" no encontrada en el archivo.');return}
  const A=XLSX.utils.sheet_to_json(s,{header:1,defval:''});let n=0;
+ const hRow=A[0]||[],cIx=hRow.indexOf('Complejidad');
  for(const r of A.slice(1)){
-   const k=r[0];if(!k||!r[7]||r[7]==='Sin evaluar')continue;
-   const o=S[k];if(o&&ld(o)>=ld({fecha:r[20],ftrab:r[23],flib:r[24],fmod:r[28]}))continue;
-   const e={h:[],res:r[7],coord:r[8],man:r[9],mtipo:r[10],sop:r[11],mat:r[12],desc:r[13],plat:r[14],and:r[15],nand:r[16],fsol:r[17],otro:r[18],sup:r[19],fecha:String(r[20]),pl:r[1],un:r[2],pr:r[3],sp:r[4],mt:r[5],est:r[22],ftrab:r[23],flib:r[24],mont:r[25],nota:r[26],hist:r[27]?String(r[27]).split(' | '):[],fmod:r[28]};
+   const k=r[0];if(!k)continue;
+   const rRes = cIx>0 ? r[8] : r[7];
+   if(!rRes||rRes==='Sin evaluar')continue;
+   const o=S[k];
+   const off = cIx>0 ? 1 : 0;
+   if(o&&ld(o)>=ld({fecha:r[20+off],ftrab:r[23+off],flib:r[24+off],fmod:r[28+off]}))continue;
+   const e={h:[],res:rRes,cmplx:(cIx>0?r[cIx]:'')||'Media',coord:r[8+off],man:r[9+off],mtipo:r[10+off],sop:r[11+off],mat:r[12+off],desc:r[13+off],plat:r[14+off],and:r[15+off],nand:r[16+off],fsol:r[17+off],otro:r[18+off],sup:r[19+off],fecha:String(r[20+off]),pl:r[1],un:r[2],pr:r[3],sp:r[4+off],mt:r[5+off],est:r[22+off],ftrab:r[23+off],flib:r[24+off],mont:r[25+off],nota:r[26+off],hist:r[27+off]?String(r[27+off]).split(' | '):[],fmod:r[28+off]};
    Object.keys(e).forEach(f=>{if(e[f]==='')delete e[f]});S[k]=e;n++;
  }
  const rd=nm=>W.Sheets[nm]?XLSX.utils.sheet_to_json(W.Sheets[nm],{header:1,defval:''}).slice(1):[];
  rd('Equipos').forEach(r=>{if(r[1]&&!EQ.some(e=>e.nom===r[1]))EQ.push({id:r[0]||'e'+Date.now()+EQ.length,nom:r[1],tipo:r[2],alt:r[3],est:r[4]||'Disponible'})});
  rd('Cuadrillas').forEach(r=>{if(r[1]&&!QD.some(q=>q.nom===r[1]))QD.push({id:r[0]||'q'+Date.now()+QD.length,nom:r[1],turno:r[2],n:r[3]})});
- rd('Programa').forEach(r=>{const x=S[r[3]];if(x&&r[0]){x.pfecha=String(r[0]);x.pest=r[7]||'Programada';if(r[1])x.pcuad=r[1];if(r[8])x.pnota=r[8];const e=EQ.find(q=>q.nom===r[2]);if(e)x.peq=e.id}});
+ rd('Programa').forEach(r=>{const x=S[r[3]];if(x&&r[0]){x.pfecha=String(r[0]);x.pest=r[8]||r[7]||'Programada';if(r[1])x.pcuad=r[1];if(r[9]||r[8])x.pnota=r[9]||r[8];const e=EQ.find(q=>q.nom===r[2]);if(e)x.peq=e.id}});
  rd('Excepciones').forEach(r=>{const x=S[r[0]];if(x&&r[1]){x.exc=x.exc||{};x.exc[r[1]]={m:r[2],f:String(r[3])}}});
  rd('Alertas cerradas').forEach(r=>{const x=S[r[0]];if(x&&r[1]){x.cerr=x.cerr||{};x.cerr[r[1]]={f:String(r[2]),n:r[3]||''}}});
  rd('Soportes asignados').forEach(r=>{const x=S[r[0]];if(x&&r[1]){x.sp0=x.sp0||[];if(!x.sp0.includes(r[1]))x.sp0.push(r[1])}});
