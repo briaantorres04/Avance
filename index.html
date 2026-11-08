@@ -548,7 +548,6 @@ function res(a){
 }
 
 const CL={'Trabajable':'ok','No alineable, Línea incompleta':'er','Trabajado':'bl','Liberado':'ok','No alineable por falta de material':'er','Pendiente por andamio':'wa','Pendiente solicitud de andamio':'wa','Requiere otro medio de acceso':'bl'};
-const CMPLX_COLORS={'Baja':'ok','Media':'wa','Alta':'er','Crítica':'p'};
 
 const QT={
  mont:['¿El isométrico está montado completo?','Confirma en campo que todos sus spools estén montados. Si falta alguno, queda como No alineable, Línea incompleta.'],
@@ -908,14 +907,70 @@ function soportes(t,name){
  alert(n+' soportes de '+Object.keys(SP).length+' isométricos importados.');
 }
 
+function cambiarEstSoporte(iso, codSop, nuevoEstado) {
+  const r = D.find(x => x.iso === iso);
+  const k = r ? crOf(r) : String(iso).replace(/^[A-Z]+-\d+-\d+-K-/, '');
+  const list = SP[k];
+  if (!list) return;
+
+  const item = list.find(x => x[0] === codSop);
+  if (!item) return;
+
+  if (nuevoEstado === 'Rechazado') {
+    const seguro = confirm('¿Confirmas marcar como RECHAZADO el soporte ' + codSop + '?\nRequerirá reinstalación.');
+    if (!seguro) {
+      draw();
+      return;
+    }
+    const motivo = prompt('Motivo del rechazo para ' + codSop + ' (opcional):', '');
+    if (motivo && motivo.trim()) {
+      item[9] = motivo.trim();
+    }
+  }
+
+  item[2] = nuevoEstado;
+  if (nuevoEstado === 'Liberado' || nuevoEstado === 'Instalado') {
+    item[6] = hoy();
+  }
+
+  sv();
+  idb('s', { d: SP, i: spi }).catch(() => {});
+  
+  if (S[iso]) {
+    lg(S[iso], 'Soporte ' + codSop + ' marcado como ' + nuevoEstado + (item[9] ? ': ' + item[9] : ''));
+  }
+  
+  draw();
+}
+
 function sblock(iso){
- const a=spOf(iso);if(!a)return'<p class="mu" style="margin:8px 0;font-size:12px">Sin datos de soportes para este isométrico'+(Object.keys(SP).length?'.':'. Carga el CSV con "Cargar Soportes".')+'</p>';
+ const a=spOf(iso);
+ if(!a)return'<p class="mu" style="margin:8px 0;font-size:12px">Sin datos de soportes para este isométrico'+(Object.keys(SP).length?'.':'. Carga el CSV con "Cargar Soportes".')+'</p>';
  const q=sres(a),s=S[iso],ex=(s&&s.exc)||{},cc=(s&&s.cerr)||{},prog=s&&s.pfecha;
+ 
  const rows=relS(a).map(x=>{
    const e=ex[x[0]];
-   return'<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between"><b style="font-family:var(--font-mono)">'+esc(x[0])+'</b><span class="b '+({'Instalado':'wa','Liberado':'ok','Rechazado':'er'}[x[2]]||'mu')+'">'+esc(x[2])+'</span></div><div class="mu" style="font-size:12px;margin:2px 0">'+esc(x[1])+' · '+esc(sdesc(x))+'</div>'+(e?'<div class="er" style="font-size:12px">Excepción registrada: '+esc(e.m)+' ('+e.f+')</div>':'')+(cc[x[0]]?'<div class="mu" style="font-size:12px">Alerta cerrada el '+cc[x[0]].f+(cc[x[0]].n?' · '+esc(cc[x[0]].n):'')+' <button data-i="'+esc(iso)+'" data-c="'+esc(x[0])+'" onclick="reab(this.dataset.i,this.dataset.c)">Reabrir</button></div>':'')+(prog&&!okS(x)?'<button style="margin-top:4px" data-i="'+esc(iso)+'" data-c="'+esc(x[0])+'" onclick="exc(this.dataset.i,this.dataset.c)">'+(e?'Quitar excepción':'Registrar excepción')+'</button>':'')+'</div>';
+   const stClass = {'Instalado':'wa','Liberado':'ok','Rechazado':'er'}[x[2]]||'mu';
+   
+   return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">' +
+     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+       '<b style="font-family:var(--font-mono)">' + esc(x[0]) + '</b>' +
+       '<select class="b ' + stClass + '" style="width:auto;padding:2px 6px;font-size:11px;cursor:pointer" ' +
+               'onchange="cambiarEstSoporte(\'' + esc(iso) + '\', \'' + esc(x[0]) + '\', this.value)">' +
+         '<option value="Pendiente"' + (x[2]==='Pendiente'?' selected':'') + '>PENDIENTE</option>' +
+         '<option value="Instalado"' + (x[2]==='Instalado'?' selected':'') + '>INSTALADO</option>' +
+         '<option value="Liberado"' + (x[2]==='Liberado'?' selected':'') + '>LIBERADO</option>' +
+         '<option value="Rechazado"' + (x[2]==='Rechazado'?' selected':'') + '>RECHAZADO</option>' +
+       '</select>' +
+     '</div>' +
+     '<div class="mu" style="font-size:12px;margin:2px 0">' + esc(x[1]) + ' · ' + esc(sdesc(x)) + '</div>' +
+     (e ? '<div class="er" style="font-size:12px">Excepción registrada: ' + esc(e.m) + ' (' + e.f + ')</div>' : '') +
+     (cc[x[0]] ? '<div class="mu" style="font-size:12px">Alerta cerrada el ' + cc[x[0]].f + (cc[x[0]].n ? ' · ' + esc(cc[x[0]].n) : '') + ' <button data-i="' + esc(iso) + '" data-c="' + esc(x[0]) + '" onclick="reab(this.dataset.i,this.dataset.c)">Reabrir</button></div>' : '') +
+     (prog && !okS(x) ? '<button style="margin-top:4px" data-i="' + esc(iso) + '" data-c="' + esc(x[0]) + '" onclick="exc(this.dataset.i,this.dataset.c)">' + (e ? 'Quitar excepción' : 'Registrar excepción') + '</button>' : '') +
+   '</div>';
  }).join('');
- return'<details style="margin:12px 0;border:1px solid var(--border);padding:10px" class="c"><summary><b>Soportería Asociada</b> <span class="mu">· '+(q.i+q.l)+'/'+q.n+' instalados'+(q.p?' · '+q.p+' pendientes ('+q.conRec+' con material)':'')+(q.r?' · '+q.r+' rechazados':'')+'</span></summary>'+rows+'<small class="mu" style="display:block;margin-top:8px">'+esc(spi)+(a.length>relS(a).length?' · '+(a.length-relS(a).length)+' soportes no requeridos omitidos':'')+'</small></details>';
+
+ return '<details style="margin:12px 0;border:1px solid var(--border);padding:10px" class="c"><summary><b>Soportería Asociada</b> <span class="mu">· ' + (q.i+q.l) + '/' + q.n + ' instalados' + (q.p ? ' · ' + q.p + ' pendientes (' + q.conRec + ' con material)' : '') + (q.r ? ' · ' + q.r + ' rechazados' : '') + '</span></summary>' + rows + '<small class="mu" style="display:block;margin-top:8px">' + esc(spi) + (a.length>relS(a).length ? ' · ' + (a.length-relS(a).length) + ' soportes no requeridos omitidos' : '') + '</small></details>';
 }
 
 function exc(i,c){
