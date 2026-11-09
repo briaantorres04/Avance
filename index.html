@@ -99,7 +99,7 @@ header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   z-index: 20;
 }
 
@@ -181,6 +181,10 @@ button.p {
 }
 button.p:hover { background: var(--accent-hover); }
 
+a.btnlink{display:inline-block;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:10px 16px;min-height:40px;border:1px solid var(--accent);background:var(--accent);color:var(--tx-on-accent);text-decoration:none}
+select.sps{width:auto;min-height:40px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:env(safe-area-inset-top,0px);background:var(--surface);z-index:21}
+@media (pointer:coarse){input,select,textarea{font-size:16px;min-height:44px}button{min-height:44px;font-size:13px;padding:10px 14px}.b{font-size:12px}}
 /* INDICADOR DE CAMBIOS NO RESPALDADOS */
 .unsaved-badge {
   display: inline-block;
@@ -509,7 +513,7 @@ details summary {
     <button id="th_btn" onclick="toggleTheme()">Modo Sol</button>
     <button id="ld">Cargar Avance</button>
     <button id="lsp">Cargar Soportes</button>
-    <button id="ex_sp" onclick="exportarCSV()">Exportar CSV Soportes</button>
+    <button id="ex_sp" onclick="exportarCSV()">Exportar CSV Soportes<span id="spc_cnt"></span></button>
     <button id="im">Importar</button>
     <button id="ex" class="p">Guardar en Excel<span id="unsaved_cnt"></span></button>
     <input id="fi" type="file" accept=".xlsx,.xlsm,.xls,.csv" hidden>
@@ -522,7 +526,7 @@ details summary {
 
 <script src="xlsx.full.min.js"></script>
 <script>
-let D=[],info='',pf='',sf='',AL=3,EQ=[],QD=[],pa=null,pd='',SP={},spi='',unsaved=0,metaDia=120,srt='pr',spOpen=false;
+let D=[],info='',pf='',sf='',AL=3,EQ=[],QD=[],pa=null,pd='',SP={},spi='',unsaved=0,metaDia=120,srt='pr',spO={},SPC=[];
 const K='evalAlin1';let S={},sup='';
 
 function initTheme(){
@@ -553,9 +557,12 @@ try{
   unsaved=+localStorage.getItem(K+'u')||0;
   metaDia=+localStorage.getItem(K+'m')||120;
   srt=localStorage.getItem(K+'srt')||'pr';
+  SPC=JSON.parse(localStorage.getItem(K+'sc')||'[]');
 }catch(e){}
 
 function updateUnsavedUI(){
+  const sc = $('spc_cnt');
+  if(sc) sc.innerHTML = SPC.length ? '<span class="unsaved-badge">' + SPC.length + '</span>' : '';
   const el = $('unsaved_cnt');
   if(!el) return;
   el.innerHTML = unsaved > 0 ? '<span class="unsaved-badge">' + unsaved + '</span>' : '';
@@ -571,6 +578,7 @@ const sv=(markChange=true)=>{
     localStorage.setItem(K+'s',sup);
     localStorage.setItem(K+'e',JSON.stringify(EQ));
     localStorage.setItem(K+'q',JSON.stringify(QD));
+    localStorage.setItem(K+'sc',JSON.stringify(SPC));
     updateUnsavedUI();
   }catch(e){}
 };
@@ -643,7 +651,7 @@ function nw(){a={h:[],cmplx:(S[cur.iso]&&S[cur.iso].cmplx)||'Media'};draw()}
 function pick(i){cur=D[i];a=S[cur.iso]?null:{h:[],cmplx:'Media'};msg='';draw()}
 
 function setCmplx(val){
- if(a){ a.cmplx=val; draw(); }
+ if(a){ a.cmplx=val; draw(true); }
  else if(cur && S[cur.iso]){
    S[cur.iso].cmplx=val;
    lg(S[cur.iso],'Complejidad cambiada a '+val);
@@ -712,8 +720,13 @@ function guardar(irSiguiente=false){
  const curIdx = LBefore.findIndex(([r])=>r.iso===cur.iso);
  
  const r=res(a);const o=S[cur.iso]||{};
- S[cur.iso]={...a,res:r,sup,fecha:hoy(),pl:cur.pl,un:cur.un,pr:cur.pr,sp:cur.sp,mt:cur.mt,cmplx:a.cmplx||'Media',nota:o.nota,hist:o.hist};
+ const kp={};['pfecha','pcuad','peq','pest','sp0','pnota','exc','cerr','nota','hist'].forEach(f=>{if(o[f]!==undefined)kp[f]=o[f]});
+ const quitaAv=!!o.est&&r!=='Trabajable';
+ if(o.est&&!quitaAv){kp.est=o.est;kp.ftrab=o.ftrab;kp.flib=o.flib}
+ S[cur.iso]={...a,...kp,res:r,sup,fecha:hoy(),pl:cur.pl,un:cur.un,pr:cur.pr,sp:cur.sp,mt:cur.mt,cmplx:a.cmplx||'Media'};
  lg(S[cur.iso],'Evaluado: '+r+' · Complejidad: '+(a.cmplx||'Media'));
+ if(quitaAv)lg(S[cur.iso],'Se quitó el avance ('+o.est+') porque la reevaluación ya no es Trabajable');
+ if(kp.pfecha&&r!=='Trabajable')lg(S[cur.iso],'Revisar: sigue programado el '+kp.pfecha+' pero ya no es Trabajable');
  sv();
  
  if(irSiguiente){
@@ -753,7 +766,7 @@ function panel(){
  });
  h+='</div></div>';
  
- if(msg)h+='<div style="padding:8px 12px;margin:10px 0;border:1px solid currentColor" class="'+(msg.includes('éxito')||msg.includes('actualizado')||msg.includes('Siguiente')?'ok':'er')+'">'+esc(msg)+'</div>';
+ if(msg)h+='<div style="padding:8px 12px;margin:10px 0;border:1px solid currentColor" class="'+(/actualizad|éxito|Siguiente|guardad/i.test(msg)?'ok':'er')+'">'+esc(msg)+'</div>';
  
  h+=sblock(cur.iso);
 
@@ -851,13 +864,15 @@ function dash(){
  return h;
 }
 
-function draw(){
+function draw(kf){
+ const kv={};if(kf)document.querySelectorAll('[id^="f_"]').forEach(e=>{kv[e.id]=e.value});
  $('t1').className=tab==='ev'?'on':'';
  $('t2').className=tab==='db'?'on':'';
  $('t3').className=tab==='pg'?'on':'';
  $('m').innerHTML=(tab==='al'?'':bn())+(tab==='ev'?'<div class="g">'+lista()+'<div>'+panel()+'</div></div>':tab==='pg'?pg():tab==='al'?al():dash());
  updateThemeBtn(document.documentElement.getAttribute('data-theme'));
  updateUnsavedUI();
+ if(kf)Object.keys(kv).forEach(id=>{const e=$(id);if(e&&kv[id])e.value=kv[id]});
 }
 
 $('t1').onclick=()=>{tab='ev';draw()};
@@ -963,7 +978,7 @@ function pg(){
 
  h+='<div class="c" style="margin-top:14px"><b>Actividades Asignadas para el Día</b>'+(day.length?day.map(k=>{
    const x=S[k],w=clash(k);
-   return'<div style="padding:12px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--font-mono);font-size:15px">'+esc(k)+'</b><span class="b '+({'Programada':'mu','En proceso':'wa','Terminada':'ok'})[x.pest]+'">'+esc(x.pest)+'</span></div><div class="mu" style="margin:4px 0">'+esc(x.pcuad||'Sin cuadrilla')+' · '+esc(eqName(x.peq)||'Sin equipo')+' · Complejidad: '+esc(x.cmplx||'Media')+' · '+m1(x.mt)+' m</div>'+(w?'<div class="er" style="margin:4px 0;font-weight:700">'+esc(w)+'</div>':'')+sblock(k)+(x.pnota?'<div class="mu" style="margin:4px 0">Nota: '+esc(x.pnota)+'</div>':'')+'<div class="f" style="margin:8px 0 4px"><button data-k="'+esc(k)+'" onclick="pset(this.dataset.k,\'En proceso\')">Iniciar</button><button class="p" data-k="'+esc(k)+'" onclick="pset(this.dataset.k,\'Terminada\')">Terminada</button><button data-k="'+esc(k)+'" onclick="pun(this.dataset.k)">Reprogramar</button></div><div class="f" style="margin:0"><input placeholder="Retroalimentación de campo" value="'+esc(x.pnota||'')+'"><button data-k="'+esc(k)+'" onclick="pnota(this)" style="flex:0 0 auto">Guardar</button></div></div>';
+   return'<div style="padding:12px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--font-mono);font-size:15px">'+esc(k)+'</b><span class="b '+({'Programada':'mu','En proceso':'wa','Terminada':'ok'})[x.pest]+'">'+esc(x.pest)+'</span></div><div class="mu" style="margin:4px 0">'+esc(x.pcuad||'Sin cuadrilla')+' · '+esc(eqName(x.peq)||'Sin equipo')+' · Complejidad: '+esc(x.cmplx||'Media')+' · '+m1(x.mt)+' m</div>'+(w?'<div class="er" style="margin:4px 0;font-weight:700">'+esc(w)+'</div>':'')+(x.res!=='Trabajable'&&!x.est?'<div class="er" style="margin:4px 0;font-weight:700">Reevaluado: ya no es trabajable. Revisa o reprograma esta actividad.</div>':'')+sblock(k)+(x.pnota?'<div class="mu" style="margin:4px 0">Nota: '+esc(x.pnota)+'</div>':'')+'<div class="f" style="margin:8px 0 4px"><button data-k="'+esc(k)+'" onclick="pset(this.dataset.k,\'En proceso\')">Iniciar</button><button class="p" data-k="'+esc(k)+'" onclick="pset(this.dataset.k,\'Terminada\')">Terminada</button><button data-k="'+esc(k)+'" onclick="pun(this.dataset.k)">Reprogramar</button></div><div class="f" style="margin:0"><input placeholder="Retroalimentación de campo" value="'+esc(x.pnota||'')+'"><button data-k="'+esc(k)+'" onclick="pnota(this)" style="flex:0 0 auto">Guardar</button></div></div>';
  }).join(''):'<p class="mu" style="margin-top:10px">No hay actividades programadas para este día.</p>')+'</div>';
 
  h+='<div class="c" style="margin-top:14px"><b>Bandeja por Programar</b> <span class="mu">('+sin.length+' trabajables sin asignar)</span>';
@@ -972,7 +987,7 @@ function pg(){
  h+=(sin.length?'<div class="l">'+sin.slice(0,150).map(r=>'<div class="li" data-k="'+esc(r.iso)+'" onclick="pa=this.dataset.k;draw()"><b>'+esc(r.iso)+'</b><br><small>'+esc(r.pr)+' · Cmplx: '+esc(S[r.iso].cmplx||'Media')+' · '+r.mt+' m · '+dias(r)+' días desde montaje</small></div>').join('')+'</div>':'<p class="mu" style="margin-top:10px">Sin isométricos pendientes por programar.</p>')+'</div>';
 
  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px"><div class="c"><b>Equipos de Elevación</b>'+EQ.map(e=>{
-   const u=uso(e.id),st=e.est==='Mantenimiento'?['er','Mantenimiento']:u?['wa','Asignado hoy']:['ok','Disponible'];
+   const u=uso(e.id),st=e.est==='Mantenimiento'?['er','Mantenimiento']:u?['wa','Asignado el '+pd]:['ok','Disponible'];
    return'<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between"><b>'+esc(e.nom)+'</b><span class="b '+st[0]+'">'+esc(st[1])+'</span></div><span class="mu">'+esc(e.tipo)+(e.alt?' · '+esc(e.alt)+' m':'')+'</span><div style="margin-top:6px"><button data-k="'+e.id+'" onclick="togEq(this.dataset.k)">'+(e.est==='Mantenimiento'?'Poner disponible':'A mantenimiento')+'</button> <button data-k="'+e.id+'" onclick="delEq(this.dataset.k)">Eliminar</button></div></div>';
  }).join('')+'<div class="f" style="margin-top:10px"><input id="eq_n" placeholder="Nombre o clave (ej. Tijera 01)"><select id="eq_t"><option>Tijera</option><option>Articulada</option><option>Telescópica</option><option>Otra</option></select><input id="eq_a" type="number" placeholder="Altura máx. (m)"></div><button class="p" onclick="addEq()">Agregar Equipo</button></div>';
 
@@ -1020,8 +1035,8 @@ function sres(a){
 function sdesc(x){
  const f=x[3]+'/'+x[4]+' pzas';
  if(okS(x))return f+(x[6]?' · '+x[6]:'')+(x[5]?' · '+x[5]:'');
- if(x[2]==='Rechazado')return'Rechazado (requiere reinstalación)'+(x[9]?' · '+x[9]:'');
- return(x[10]?'Sin reporte en checklist':'Pendiente')+' · Material '+(x[7]?'recibido '+x[7]:'sin fecha de recepción')+(x[8]?' · prog. '+x[8]:'')+(x[9]?' · '+x[9]:'');
+ if(x[2]==='Rechazado')return'Rechazado (requiere reinstalación)'+(x[9]?' · '+String(x[9]).slice(0,110):'');
+ return(x[10]?'Sin reporte en checklist':'Pendiente')+' · Material '+(x[7]?'recibido '+x[7]:'sin fecha de recepción')+(x[8]?' · prog. '+x[8]:'')+(x[9]?' · '+String(x[9]).slice(0,110):'');
 }
 
 function soportes(t,name){
@@ -1030,88 +1045,68 @@ function soportes(t,name){
  const o={};
  for(const r of R.slice(1)){
    const i=r[ix('Isometrico')];if(!i)continue;const ob=r[ix('Observaciones')]||'';
-   (o[i]=o[i]||[]).push([r[ix('Soporte')],r[ix('Descripcion')],r[ix('Estado')],+r[ix('Cantidad completada')]||0,+r[ix('Cantidad total')]||1,r[ix('Responsable')],r[ix('Fecha liberacion')],(ob.match(/Recibido:\s*(\d{4}-\d{2}-\d{2})/)||[])[1]||'',(ob.match(/Sem\. programada:\s*(\S+)/)||[])[1]||'',ob.replace(/\|?\s*Sem\. programada:\s*\S+/,'').replace(/\|?\s*Recibido:\s*\S+/,'').replace(/^[\s|]+|[\s|]+$/g,'').slice(0,110),!r[ix('Ultima actualizacion')]]);
+   (o[i]=o[i]||[]).push([r[ix('Soporte')],r[ix('Descripcion')],r[ix('Estado')],+r[ix('Cantidad completada')]||0,+r[ix('Cantidad total')]||1,r[ix('Responsable')],r[ix('Fecha liberacion')],(ob.match(/Recibido:\s*(\d{4}-\d{2}-\d{2})/)||[])[1]||'',(ob.match(/Sem\. programada:\s*(\S+)/)||[])[1]||'',ob.replace(/\|?\s*Sem\. programada:\s*\S+/,'').replace(/\|?\s*Recibido:\s*\S+/,'').replace(/^[\s|]+|[\s|]+$/g,'').slice(0,600),!r[ix('Ultima actualizacion')],r[ix('Ultima actualizacion')]||'',r[ix('Tiene foto')]||'']);
  }
  for(const k of sched()){const z=S[k];if(!z.sp0){const a0=spOf(k);if(a0)z.sp0=pendS(a0).map(y=>y[0])}}
- SP=o;sv(false);spi='Checklist: '+name+' · '+hoy();
+ SP=o;const ap=applyChanges(true);sv(false);spi='Checklist: '+name+' · '+hoy();
  idb('s',{d:SP,i:spi}).catch(()=>alert('Cargados en memoria local temporal.'));
  const n=Object.values(SP).reduce((a,b)=>a+b.length,0);cur=null;draw();
- alert(n+' soportes de '+Object.keys(SP).length+' isométricos importados.');
+ alert(n+' soportes de '+Object.keys(SP).length+' isométricos importados.'+(ap.re?' Se volvieron a aplicar '+ap.re+' cambios hechos en la app.':'')+(ap.ab?' '+ap.ab+' cambios ya estaban en el checklist y se descartaron.':''));
 }
 
 function exportarCSV(){
   if(!Object.keys(SP).length){alert('No hay datos de soportes cargados para exportar.');return}
-  const cols = ['Isometrico','Soporte','Descripcion','Estado','Cantidad completada','Cantidad total','Responsable','Fecha liberacion','Observaciones','Ultima actualizacion'];
-  const escCSV = v => {
-    const s = String(v == null ? '' : v);
-    return (s.includes(',') || s.includes('"') || s.includes('\n')) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  };
-  const lines = [cols.join(',')];
+  const solo=SPC.length>0&&confirm('Hay '+SPC.length+' cambios de soportes hechos en la app.\n\nAceptar = exportar solo esos cambios.\nCancelar = exportar todo el checklist.');
+  const cols=['Isometrico','Soporte','Descripcion','Estado','Cantidad completada','Cantidad total','Responsable','Fecha liberacion','Observaciones','Tiene foto','Ultima actualizacion'];
+  const escCSV=v=>{const t=String(v==null?'':v);return(t.includes(',')||t.includes('"')||t.includes('\n'))?'"'+t.replace(/"/g,'""')+'"':t};
+  const lines=[cols.join(',')];
   for(const iso of Object.keys(SP)){
     for(const x of SP[iso]){
-      const obsParts = [];
-      if(x[7]) obsParts.push('Recibido: ' + x[7]);
-      if(x[8]) obsParts.push('Sem. programada: ' + x[8]);
-      if(x[9]) obsParts.push(x[9]);
-      const obs = obsParts.join(' | ');
-      const row = [
-        iso, x[0], x[1], x[2],
-        x[2]==='Instalado'||x[2]==='Liberado' ? x[4] : x[3],
-        x[4], x[5]||(sup||''), x[6]||'', obs, x[10] ? '' : hoy()
-      ];
-      lines.push(row.map(escCSV).join(','));
+      if(solo&&!SPC.some(z=>z.k===iso&&z.c===x[0]))continue;
+      const obs=[x[9],x[8]?'Sem. programada: '+x[8]:'',x[7]?'Recibido: '+x[7]:''].filter(Boolean).join(' | ');
+      lines.push([iso,x[0],x[1],x[2],x[3],x[4],x[5]||'',x[6]||'',obs,x[12]||'No',x[11]||(x[10]?'':hoy())].map(escCSV).join(','));
     }
   }
-  const blob = new Blob(['\ufeff' + lines.join('\r\n')], {type: 'text/csv;charset=utf-8'});
-  const name = 'Checklist_Soportes_Actualizado_' + hoy() + '.csv';
-  const url = URL.createObjectURL(blob);
-  const aEl = document.createElement('a');
-  aEl.href = url;
-  aEl.download = name;
-  document.body.appendChild(aEl);
-  aEl.click();
-  document.body.removeChild(aEl);
+  const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const name=(solo?'Cambios_Soportes_':'Checklist_Soportes_Actualizado_')+hoy()+'.csv';
+  const url=URL.createObjectURL(blob),aEl=document.createElement('a');
+  aEl.href=url;aEl.download=name;document.body.appendChild(aEl);aEl.click();document.body.removeChild(aEl);
 }
 
-function cambiarEstSoporte(iso, codSop, nuevoEstado) {
-  const r = D.find(x => x.iso === iso);
-  const k = r ? crOf(r) : String(iso).replace(/^[A-Z]+-\d+-\d+-K-/, '');
-  const list = SP[k];
-  if (!list) return;
-
-  const item = list.find(x => x[0] === codSop);
-  if (!item) return;
-
-  if (nuevoEstado === 'Rechazado') {
-    const seguro = confirm('¿Confirmas marcar como RECHAZADO el soporte ' + codSop + '?\nRequerirá reinstalación.');
-    if (!seguro) {
-      spOpen = true;
-      draw();
-      return;
-    }
-    const motivo = prompt('Motivo del rechazo para ' + codSop + ' (opcional):', '');
-    if (motivo && motivo.trim()) {
-      item[9] = motivo.trim();
-    }
-  }
-
-  item[2] = nuevoEstado;
-  item[10] = false;
-  if (nuevoEstado === 'Liberado' || nuevoEstado === 'Instalado') {
-    item[6] = hoy();
-    item[3] = item[4];
-    if(sup) item[5] = sup;
-  }
-
-  spOpen = true;
-  sv();
-  idb('s', { d: SP, i: spi }).catch(() => {});
-  
-  if (S[iso]) {
-    lg(S[iso], 'Soporte ' + codSop + ' marcado como ' + nuevoEstado + (item[9] ? ': ' + item[9] : ''));
-  }
-  
-  draw();
+let _spT=null;
+function saveSP(){clearTimeout(_spT);_spT=setTimeout(()=>idb('s',{d:SP,i:spi}).catch(()=>{}),600)}
+function setSp(it,c){
+  it[2]=c.e;it[10]=false;it[11]=c.f;
+  if(c.e==='Instalado'||c.e==='Liberado'){it[3]=it[4];it[6]=c.f;if(c.s)it[5]=c.s}else{it[3]=0;it[6]=''}
+  if(c.m&&!String(it[9]).includes(c.m))it[9]=(it[9]?it[9]+' | ':'')+'Rechazo: '+c.m;
+}
+function applyChanges(prune){
+  let re=0,ab=0;
+  SPC=SPC.filter(c=>{
+    const it=(SP[c.k]||[]).find(x=>x[0]===c.c);
+    if(!it)return true;
+    if(prune&&it[2]===c.e){ab++;return false}
+    if(prune&&String(it[11]||'').slice(0,10)>c.f){ab++;return false}
+    if(it[2]!==c.e){setSp(it,c);re++}
+    return true;
+  });
+  return{re,ab};
+}
+function cambiarEstSoporte(iso,cod,nuevo){
+  const r=D.find(x=>x.iso===iso),k=r?crOf(r):String(iso).replace(/^[A-Z]+-\d+-\d+-K-/,''),it=(SP[k]||[]).find(x=>x[0]===cod);
+  if(!it)return;
+  const prev=it[2];if(prev===nuevo)return;
+  spO[iso]=true;
+  let motivo='';
+  if(nuevo==='Rechazado'){
+    if(!confirm('¿Marcar como RECHAZADO el soporte '+cod+'? Requerirá reinstalación.')){draw();return}
+    motivo=(prompt('Motivo del rechazo (opcional):','')||'').trim();
+  } else if((prev==='Instalado'||prev==='Liberado')&&!confirm('El soporte '+cod+' ya figuraba como '+prev+'. ¿Cambiarlo a '+nuevo+'?')){draw();return}
+  const c={k,c:cod,e:nuevo,f:hoy(),s:sup||'',m:motivo};
+  SPC=SPC.filter(z=>!(z.k===k&&z.c===cod));SPC.push(c);
+  setSp(it,c);
+  const sx=S[iso];if(sx)lg(sx,'Soporte '+cod+': '+prev+' → '+nuevo+(motivo?' ('+motivo+')':''));
+  sv();saveSP();draw();
 }
 
 function sblock(iso){
@@ -1126,8 +1121,7 @@ function sblock(iso){
    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">' +
      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
        '<b style="font-family:var(--font-mono)">' + esc(x[0]) + '</b>' +
-       '<select class="b ' + stClass + '" style="width:auto;padding:2px 6px;font-size:11px;cursor:pointer" ' +
-               'onchange="cambiarEstSoporte(\'' + esc(iso) + '\', \'' + esc(x[0]) + '\', this.value)">' +
+       '<select class="b sps ' + stClass + '" data-i="' + esc(iso) + '" data-c="' + esc(x[0]) + '" onchange="cambiarEstSoporte(this.dataset.i,this.dataset.c,this.value)">' +
          '<option value="Pendiente"' + (x[2]==='Pendiente'?' selected':'') + '>PENDIENTE</option>' +
          '<option value="Instalado"' + (x[2]==='Instalado'?' selected':'') + '>INSTALADO</option>' +
          '<option value="Liberado"' + (x[2]==='Liberado'?' selected':'') + '>LIBERADO</option>' +
@@ -1141,7 +1135,7 @@ function sblock(iso){
    '</div>';
  }).join('');
 
- return '<details ' + (spOpen ? 'open ' : '') + 'ontoggle="spOpen=this.open" style="margin:12px 0;border:1px solid var(--border);padding:10px" class="c"><summary><b>Soportería Asociada</b> <span class="mu">· ' + (q.i+q.l) + '/' + q.n + ' instalados' + (q.p ? ' · ' + q.p + ' pendientes (' + q.conRec + ' con material)' : '') + (q.r ? ' · ' + q.r + ' rechazados' : '') + '</span></summary>' + rows + '<small class="mu" style="display:block;margin-top:8px">' + esc(spi) + (a.length>relS(a).length ? ' · ' + (a.length-relS(a).length) + ' soportes no requeridos omitidos' : '') + '</small></details>';
+ return '<details ' + (spO[iso] ? 'open ' : '') + 'data-i="' + esc(iso) + '" ontoggle="spO[this.dataset.i]=this.open" style="margin:12px 0;border:1px solid var(--border);padding:10px" class="c"><summary><b>Soportería Asociada</b> <span class="mu">· ' + (q.i+q.l) + '/' + q.n + ' instalados' + (q.p ? ' · ' + q.p + ' pendientes (' + q.conRec + ' con material)' : '') + (q.r ? ' · ' + q.r + ' rechazados' : '') + '</span></summary>' + rows + '<small class="mu" style="display:block;margin-top:8px">' + esc(spi) + (a.length>relS(a).length ? ' · ' + (a.length-relS(a).length) + ' soportes no requeridos omitidos' : '') + '</small></details>';
 }
 
 function exc(i,c){
@@ -1153,7 +1147,7 @@ function exc(i,c){
    s.exc[c]={m:m.trim(),f:hoy()};
    lg(s,'Excepción soporte '+c+': '+m.trim());
  }
- spOpen=true;sv();draw();
+ spO[i]=true;sv();draw();
 }
 
 function alertas(){
@@ -1176,7 +1170,7 @@ function cerrar(i,c){
  lg(s,'Alerta soporte '+c+' cerrada'+(n.trim()?': '+n.trim():''));
  sv();draw();
 }
-function reab(i,c){const s=S[i];if(s.cerr)delete s.cerr[c];lg(s,'Alerta soporte '+c+' reabierta');spOpen=true;sv();draw()}
+function reab(i,c){const s=S[i];if(s.cerr)delete s.cerr[c];lg(s,'Alerta soporte '+c+' reabierta');spO[i]=true;sv();draw()}
 
 function bn(){
  const a=alertas();if(!a.length)return'';const e=a.filter(x=>x.exc).length;
@@ -1187,7 +1181,7 @@ function al(){
  const a=alertas();
  let h='<div class="c"><div class="f" style="margin:0;align-items:center"><b style="flex:1">Control de Soportes en Alerta</b><button onclick="tab=\'ev\';draw()">Regresar</button><button class="p" onclick="shA()">Compartir</button></div><div class="mu" style="font-size:12px;margin-top:6px">Seguimiento de soportes asignados pendientes de instalación. Las liberadas en el checklist se indican listas para cierre.</div></div>';
  if(!a.length)return h+'<div class="c" style="margin-top:14px">Sin alertas vigentes.</div>';
- return h+'<div class="c" style="margin-top:14px"><div class="tw"><table><tr><th>Isométrico</th><th>Soporte</th><th>Checklist</th><th>Días</th><th>Material Recibido</th><th>Excepción</th><th>Acción</th></tr>'+a.map(x=>'<tr><td>'+esc(x.iso)+'</td><td style="white-space:normal">'+esc(x.c)+' · '+esc(x.d)+'</td><td class="'+(x.ok?'ok':'')+'" style="white-space:normal">'+(x.ok?'Liberado'+(x.inst?' el '+esc(x.inst):''):esc(x.est))+'</td><td class="'+(x.exc?'er':'')+'">'+x.dias+' d</td><td>'+esc(x.rec||'—')+'</td><td style="white-space:normal">'+(x.exc?esc(x.exc.m):'—')+'</td><td><button class="p" data-i="'+esc(x.iso)+'" data-c="'+esc(x.c)+'" onclick="cerrar(this.dataset.i,this.dataset.c)">Cerrar</button></td></tr>').join('')+'</table></div></div>';
+ return h+'<div class="c" style="margin-top:14px"><div class="tw"><table><tr><th>Isométrico</th><th>Soporte</th><th>Checklist</th><th>Días</th><th>Material Recibido</th><th>Excepción</th><th>Acción</th></tr>'+a.map(x=>'<tr><td>'+esc(x.iso)+'</td><td style="white-space:normal">'+esc(x.c)+' · '+esc(x.d)+'</td><td class="'+(x.ok?'ok':'')+'" style="white-space:normal">'+(x.ok?esc(x.est)+(x.inst?' el '+esc(x.inst):''):esc(x.est))+'</td><td class="'+(x.exc?'er':'')+'">'+x.dias+' d</td><td>'+esc(x.rec||'—')+'</td><td style="white-space:normal">'+(x.exc?esc(x.exc.m):'—')+'</td><td><button class="p" data-i="'+esc(x.iso)+'" data-c="'+esc(x.c)+'" onclick="cerrar(this.dataset.i,this.dataset.c)">Cerrar</button></td></tr>').join('')+'</table></div></div>';
 }
 
 function shA(){
@@ -1205,16 +1199,14 @@ function hint(k){
 const ISO=x=>x instanceof Date?x.toISOString().slice(0,10):typeof x==='number'?new Date(Math.round((x-25569)*864e5)).toISOString().slice(0,10):String(x).slice(0,10);
 const has=v=>v!=null&&String(v).trim()!=='';
 
+function respaldoOk(){unsaved=0;try{localStorage.setItem(K+'u',0)}catch(e){}updateUnsavedUI()}
 function guarda(buf,name){
- unsaved=0;
- try{localStorage.setItem(K+'u',0)}catch(e){}
- updateUnsavedUI();
  const t='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',b=new Blob([buf],{type:t}),u=URL.createObjectURL(b),x=$('bx');
  let f=null;
  try{const g=new File([b],name,{type:t});if(navigator.canShare&&navigator.canShare({files:[g]}))f=g}catch(e){}
- x.innerHTML='<b style="color:var(--tx-main)">Archivo Excel Generado (Respaldo al día)</b><div class="mu" style="font-size:12px;margin:4px 0 10px">'+esc(name)+'</div><div style="display:flex;gap:10px"><a href="'+u+'" download="'+esc(name)+'"><button class="p">Descargar</button></a>'+(f?'<button id="shr">Compartir</button>':'')+'<button id="cl">Cerrar</button></div>';
+ x.innerHTML='<b style="color:var(--tx-main)">Archivo Excel generado</b><div class="mu" style="font-size:12px;margin:4px 0 10px">'+esc(name)+'</div><div style="display:flex;gap:10px"><a class="btnlink" href="'+u+'" download="'+esc(name)+'" onclick="respaldoOk()">Descargar</a>'+(f?'<button id="shr">Compartir</button>':'')+'<button id="cl">Cerrar</button></div>';
  x.style.display='block';
- if(f)$('shr').onclick=e=>{e.preventDefault();navigator.share({files:[f]}).catch(()=>{})};
+ if(f)$('shr').onclick=e=>{e.preventDefault();navigator.share({files:[f]}).then(respaldoOk).catch(()=>{})};
  $('cl').onclick=e=>{e.preventDefault();x.style.display='none'};
 }
 
@@ -1226,7 +1218,7 @@ $('ex').onclick=()=>{
  
  try{
   const w=XLSX.utils.book_new();
-  const s1=XLSX.utils.aoa_to_sheet(A),s2=XLSX.utils.aoa_to_sheet(B),s4=XLSX.utils.aoa_to_sheet([['Fecha','Cuadrilla','Equipo','Isométrico','Unidad','Prioridad','Complejidad','Metros','Estado','Retroalimentación'],...sched().sort((x,y)=>S[x].pfecha.localeCompare(S[y].pfecha)).map(k=>{const x=S[k];return[x.pfecha,x.pcuad||'',eqName(x.peq),k,x.un,x.pr,x.cmplx||'Media',x.mt,x.pest,x.pnota||'']})]),s5=XLSX.utils.aoa_to_sheet([['Id','Nombre','Tipo','Altura máx. (m)','Estado'],...EQ.map(e=>[e.id,e.nom,e.tipo,e.alt,e.est])]),s6=XLSX.utils.aoa_to_sheet([['Id','Nombre','Turno','Integrantes'],...QD.map(q=>[q.id,q.nom,q.turno,q.n])]),s7=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Descripción','Estado','Días','Material recibido','Excepción (motivo)','Fecha de excepción','Instalado en checklist'],...alertas().map(x=>[x.iso,x.c,x.d,x.est,x.dias,x.rec||'',x.exc?x.exc.m:'',x.exc?x.exc.f:'',x.ok?'Sí':'No'])]),s8=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Motivo','Fecha'],...Object.keys(S).flatMap(k=>Object.keys(S[k].exc||{}).map(c=>[k,c,S[k].exc[c].m,S[k].exc[c].f]))]),s9=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Fecha de cierre','Nota'],...Object.keys(S).flatMap(k=>Object.keys(S[k].cerr||{}).map(c=>[k,c,S[k].cerr[c].f,S[k].cerr[c].n||'']))]),s10=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte asignado'],...Object.keys(S).flatMap(k=>(S[k].sp0||[]).map(c=>[k,c]))]),s3=XLSX.utils.aoa_to_sheet([['Unidad','Isométricos','Metros elegibles','m por trabajar','m trabajados','m liberados'],...mu().map(r=>[r[0],r[1],...r.slice(2).map(v=>Math.round(v*10)/10)])]);
+  const s1=XLSX.utils.aoa_to_sheet(A),s2=XLSX.utils.aoa_to_sheet(B),s4=XLSX.utils.aoa_to_sheet([['Fecha','Cuadrilla','Equipo','Isométrico','Unidad','Prioridad','Complejidad','Metros','Estado','Retroalimentación'],...sched().sort((x,y)=>S[x].pfecha.localeCompare(S[y].pfecha)).map(k=>{const x=S[k];return[x.pfecha,x.pcuad||'',eqName(x.peq),k,x.un,x.pr,x.cmplx||'Media',x.mt,x.pest,x.pnota||'']})]),s5=XLSX.utils.aoa_to_sheet([['Id','Nombre','Tipo','Altura máx. (m)','Estado'],...EQ.map(e=>[e.id,e.nom,e.tipo,e.alt,e.est])]),s6=XLSX.utils.aoa_to_sheet([['Id','Nombre','Turno','Integrantes'],...QD.map(q=>[q.id,q.nom,q.turno,q.n])]),s7=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Descripción','Estado','Días','Material recibido','Excepción (motivo)','Fecha de excepción','Instalado en checklist'],...alertas().map(x=>[x.iso,x.c,x.d,x.est,x.dias,x.rec||'',x.exc?x.exc.m:'',x.exc?x.exc.f:'',x.ok?'Sí':'No'])]),s8=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Motivo','Fecha'],...Object.keys(S).flatMap(k=>Object.keys(S[k].exc||{}).map(c=>[k,c,S[k].exc[c].m,S[k].exc[c].f]))]),s9=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte','Fecha de cierre','Nota'],...Object.keys(S).flatMap(k=>Object.keys(S[k].cerr||{}).map(c=>[k,c,S[k].cerr[c].f,S[k].cerr[c].n||'']))]),s10=XLSX.utils.aoa_to_sheet([['Isométrico','Soporte asignado'],...Object.keys(S).flatMap(k=>(S[k].sp0||[]).map(c=>[k,c]))]),s11=XLSX.utils.aoa_to_sheet([['Isométrico (cruce)','Soporte','Estado','Fecha','Supervisor','Motivo'],...SPC.map(c=>[c.k,c.c,c.e,c.f,c.s||'',c.m||''])]),s3=XLSX.utils.aoa_to_sheet([['Unidad','Isométricos','Metros elegibles','m por trabajar','m trabajados','m liberados'],...mu().map(r=>[r[0],r[1],...r.slice(2).map(v=>Math.round(v*10)/10)])]);
   
   s1['!cols']=H.map((h,i)=>({wch:i===0?34:i===14||i===19||i===22||i===27||i===28?36:16}));
   s2['!cols']=B[0].map(()=>({wch:20}));
@@ -1241,6 +1233,7 @@ $('ex').onclick=()=>{
   XLSX.utils.book_append_sheet(w,s8,'Excepciones');
   XLSX.utils.book_append_sheet(w,s9,'Alertas cerradas');
   XLSX.utils.book_append_sheet(w,s10,'Soportes asignados');
+  XLSX.utils.book_append_sheet(w,s11,'Cambios soportes');
   
   guarda(XLSX.write(w,{bookType:'xlsx',type:'array'}),'Evaluacion_alineacion_'+new Date().toLocaleDateString('en-CA')+'.xlsx');
  } catch(e){ alert('Error al generar el libro de Excel.'); }
@@ -1282,10 +1275,13 @@ function importar(buf){
  const rd=nm=>W.Sheets[nm]?XLSX.utils.sheet_to_json(W.Sheets[nm],{header:1,defval:''}).slice(1):[];
  rd('Equipos').forEach(r=>{if(r[1]&&!EQ.some(e=>e.nom===r[1]))EQ.push({id:r[0]||'e'+Date.now()+EQ.length,nom:r[1],tipo:r[2],alt:r[3],est:r[4]||'Disponible'})});
  rd('Cuadrillas').forEach(r=>{if(r[1]&&!QD.some(q=>q.nom===r[1]))QD.push({id:r[0]||'q'+Date.now()+QD.length,nom:r[1],turno:r[2],n:r[3]})});
- rd('Programa').forEach(r=>{const x=S[r[3]];if(x&&r[0]){x.pfecha=String(r[0]);x.pest=r[8]||r[7]||'Programada';if(r[1])x.pcuad=r[1];if(r[9]||r[8])x.pnota=r[9]||r[8];const e=EQ.find(q=>q.nom===r[2]);if(e)x.peq=e.id}});
+ {const PA=W.Sheets['Programa']?XLSX.utils.sheet_to_json(W.Sheets['Programa'],{header:1,defval:''}):[],PH=PA[0]||[],px=n=>PH.indexOf(n);
+  PA.slice(1).forEach(r=>{const x=S[r[px('Isométrico')]];if(x&&r[px('Fecha')]){x.pfecha=String(r[px('Fecha')]);x.pest=r[px('Estado')]||'Programada';const cu=r[px('Cuadrilla')],no=r[px('Retroalimentación')];if(cu)x.pcuad=cu;if(no)x.pnota=no;const e=EQ.find(q=>q.nom===r[px('Equipo')]);if(e)x.peq=e.id}})}
  rd('Excepciones').forEach(r=>{const x=S[r[0]];if(x&&r[1]){x.exc=x.exc||{};x.exc[r[1]]={m:r[2],f:String(r[3])}}});
  rd('Alertas cerradas').forEach(r=>{const x=S[r[0]];if(x&&r[1]){x.cerr=x.cerr||{};x.cerr[r[1]]={f:String(r[2]),n:r[3]||''}}});
  rd('Soportes asignados').forEach(r=>{const x=S[r[0]];if(x&&r[1]){x.sp0=x.sp0||[];if(!x.sp0.includes(r[1]))x.sp0.push(r[1])}});
+ rd('Cambios soportes').forEach(r=>{if(r[0]&&r[1]&&r[2]){const c={k:r[0],c:r[1],e:r[2],f:String(r[3]),s:r[4]||'',m:r[5]||''},o=SPC.find(z=>z.k===c.k&&z.c===c.c);if(!o)SPC.push(c);else if(c.f>o.f){SPC.splice(SPC.indexOf(o),1);SPC.push(c)}}});
+ applyChanges(false);
  sv(false);draw();alert(n+' evaluaciones importadas.');
 }
 
@@ -1306,7 +1302,7 @@ $('fi').onchange=async e=>{
 initTheme();
 idb('g').then(v=>{
  if(v&&v.d){
-   SP=v.d;spi=v.i||'';
+   SP=v.d;spi=v.i||'';applyChanges(false);
    try{if(alertas().length&&localStorage.getItem(K+'l')!==hoy()){localStorage.setItem(K+'l',hoy());tab='al'}}catch(e){}
    draw();
  }
