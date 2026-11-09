@@ -651,6 +651,14 @@ function setCmplx(val){
  }
 }
 
+function addSopFaltante(btn){
+  const t=$('f_desc');
+  if(!t)return;
+  const val=btn.dataset.s;
+  if(t.value.includes(val))return;
+  t.value = (t.value.trim() ? t.value.trim() + ', ' : '') + val;
+}
+
 function done(k,fields){
  for(const f of fields){const v=$('f_'+f).value.trim();if(v)a[f]=v;else if(f!=='fsol'&&f!=='mtipo'){return}}
  if(k==='nand'&&!(+a.nand>0)){delete a.nand;return}
@@ -689,11 +697,11 @@ function cic(k){
 
 function ext(s){
  const r=s.res;let h='';
- if(r==='Pendiente solicitud de andamio'&&!s.est)h+=(dEv(s)>=AL?'<p class="er" style="padding:6px 10px;margin:8px 0;border:1px solid currentColor">Alerta: Lleva '+dEv(s)+' días sin solicitar andamio.</p>':'')+'<div class="f"><div><small class="mu">Fecha de solicitud (vacía = hoy)</small><input id="f_fs" type="date"></div></div><button class="p" onclick="cic('sol')">Registrar solicitud de andamio</button>';
- else if(r==='Pendiente por andamio'&&!s.est)h+='<button class="p" onclick="cic('and')">Andamio instalado</button>';
- else if(r==='No alineable por falta de material')h+='<button class="p" onclick="cic('mat')">Material recibido</button>';
- else if(r==='Requiere otro medio de acceso')h+='<button class="p" onclick="cic('acc')">Acceso resuelto</button>';
- h+='<div class="f"><div><small class="mu">Notas de supervisión</small><textarea id="f_nota" rows="2" placeholder="Comentarios del isométrico">'+esc(s.nota||'')+'</textarea></div></div><button onclick="cic('nota')">Guardar nota</button>';
+ if(r==='Pendiente solicitud de andamio'&&!s.est)h+=(dEv(s)>=AL?'<p class="er" style="padding:6px 10px;margin:8px 0;border:1px solid currentColor">Alerta: Lleva '+dEv(s)+' días sin solicitar andamio.</p>':'')+'<div class="f"><div><small class="mu">Fecha de solicitud (vacía = hoy)</small><input id="f_fs" type="date"></div></div><button class="p" onclick="cic(\'sol\')">Registrar solicitud de andamio</button>';
+ else if(r==='Pendiente por andamio'&&!s.est)h+='<button class="p" onclick="cic(\'and\')">Andamio instalado</button>';
+ else if(r==='No alineable por falta de material')h+='<button class="p" onclick="cic(\'mat\')">Material recibido</button>';
+ else if(r==='Requiere otro medio de acceso')h+='<button class="p" onclick="cic(\'acc\')">Acceso resuelto</button>';
+ h+='<div class="f"><div><small class="mu">Notas de supervisión</small><textarea id="f_nota" rows="2" placeholder="Comentarios del isométrico">'+esc(s.nota||'')+'</textarea></div></div><button onclick="cic(\'nota\')">Guardar nota</button>';
  if(s.hist&&s.hist.length)h+='<div class="mu" style="margin:16px 0 6px;font-weight:700;font-size:11px;text-transform:uppercase">Historial de registros</div><div class="tw"><table>'+s.hist.slice().reverse().map(x=>'<tr><td style="white-space:normal">'+esc(x)+'</td></tr>').join('')+'</table></div>';
  return h+'<div style="height:10px"></div>';
 }
@@ -741,7 +749,7 @@ function panel(){
  h+='<div style="margin:12px 0"><small class="mu" style="font-weight:700;text-transform:uppercase;font-size:10px">Nivel de Complejidad Técnico</small><div class="cmplx-group">';
  ['Baja','Media','Alta','Crítica'].forEach(lvl=>{
    const act = curCmplx === lvl ? 'active' : '';
-   h+='<button type="button" class="cmplx-btn '+act+'" data-c="'+lvl+'" onclick="setCmplx(''+lvl+'')">'+lvl+'</button>';
+   h+='<button type="button" class="cmplx-btn '+act+'" data-c="'+lvl+'" onclick="setCmplx(\''+lvl+'\')">'+lvl+'</button>';
  });
  h+='</div></div>';
  
@@ -751,7 +759,7 @@ function panel(){
 
  const s=S[cur.iso];
  if(s&&!a){
-   h+='<div style="margin:14px 0 8px"><span class="b '+CL[ef(s)]+'" style="font-size:13px;padding:4px 10px">'+esc(ef(s))+'</span> <span class="b '+({'Baja':'ok','Media':'wa','Alta':'er','Crítica':'er'}[s.cmplx||'Media'])+'" style="font-size:13px;padding:4px 10px">Complejidad: '+esc(s.cmplx||'Media')+'</span></div><p class="mu" style="font-size:12px;margin-bottom:14px">Evaluado por '+esc(s.sup)+' el '+s.fecha+'.</p>'+det(s)+ext(s)+'<div class="yn" style="margin-top:14px"><button onclick="est('Trabajado')">Marcar Trabajado</button><button class="p" onclick="est('Liberado')">Marcar Liberado</button></div>'+(s.est?'<button style="width:100%;margin-bottom:8px" onclick="est('back')">Quitar avance</button>':'')+'<button style="width:100%" onclick="nw()">Reevaluar Isométrico</button>';
+   h+='<div style="margin:14px 0 8px"><span class="b '+CL[ef(s)]+'" style="font-size:13px;padding:4px 10px">'+esc(ef(s))+'</span> <span class="b '+({'Baja':'ok','Media':'wa','Alta':'er','Crítica':'er'}[s.cmplx||'Media'])+'" style="font-size:13px;padding:4px 10px">Complejidad: '+esc(s.cmplx||'Media')+'</span></div><p class="mu" style="font-size:12px;margin-bottom:14px">Evaluado por '+esc(s.sup)+' el '+s.fecha+'.</p>'+det(s)+ext(s)+'<div class="yn" style="margin-top:14px"><button onclick="est(\'Trabajado\')">Marcar Trabajado</button><button class="p" onclick="est(\'Liberado\')">Marcar Liberado</button></div>'+(s.est?'<button style="width:100%;margin-bottom:8px" onclick="est(\'back\')">Quitar avance</button>':'')+'<button style="width:100%" onclick="nw()">Reevaluar Isométrico</button>';
    return h+'</div>';
  }
 
@@ -762,13 +770,19 @@ function panel(){
  } else if(QT[k]){
    h+='<div class="q">'+QT[k][0]+'</div><div class="mu" style="font-size:12px;margin-bottom:10px">'+QT[k][1]+'</div>'+hint(k);
    if(k==='man')h+='<div class="f"><div><small class="mu">Tipo de maniobra requerida</small><select id="f_mtipo"><option value=""></option><option>Manual</option><option>Grúa</option><option>Manual y grúa</option></select></div></div>';
-   h+='<div class="yn"><button onclick="'+(k==='man'?'a.mtipo=$('f_mtipo').value;':'')+'ans(''+k+'','Sí')">SÍ</button><button onclick="'+(k==='man'?'a.mtipo=$('f_mtipo').value;':'')+'ans(''+k+'','NO')">NO</button></div>'+(a.h.length?'<button onclick="back()">Atrás</button>':'');
+   h+='<div class="yn"><button onclick="'+(k==='man'?'a.mtipo=$(\'f_mtipo\').value;':'')+'ans(\''+k+'\',\'Sí\')">SÍ</button><button onclick="'+(k==='man'?'a.mtipo=$(\'f_mtipo\').value;':'')+'ans(\''+k+'\',\'No\')">NO</button></div>'+(a.h.length?'<button onclick="back()">Atrás</button>':'');
  } else if(k==='desc'){
-   h+='<div class="q">Detalle del soporte faltante</div><textarea id="f_desc" rows="3" placeholder="Tipo de soporte, cantidad, material faltante"></textarea><div class="yn"><button onclick="back()">Atrás</button><button class="p" onclick="done('desc',['desc'])">Continuar</button></div>';
+   const spList = cur ? spOf(cur.iso) : null;
+   const pendSp = spList ? pendS(spList) : [];
+   let spBtns = '';
+   if(pendSp.length){
+     spBtns = '<div class="mu" style="font-size:11px;margin:4px 0 6px">Toca un soporte pendiente del checklist para agregarlo rápido o escribe abajo:</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">' + pendSp.map(x=>'<button type="button" class="b wa" style="cursor:pointer;padding:5px 8px" data-s="'+esc(x[0]+' ('+x[1]+')')+'" onclick="addSopFaltante(this)">+ '+esc(x[0])+' · '+esc(x[1])+'</button>').join('') + '</div>';
+   }
+   h+='<div class="q">Describe el soporte que falta</div>'+spBtns+'<textarea id="f_desc" rows="3" placeholder="Tipo de soporte, cantidad, material faltante">'+esc(a.desc||'')+'</textarea><div class="yn"><button onclick="back()">Atrás</button><button class="p" onclick="done(\'desc\',[\'desc\'])">Continuar</button></div>';
  } else if(k==='nand'){
-   h+='<div class="q">Requerimiento de andamiaje</div><div class="f"><div><small class="mu">Cantidad de andamios</small><input id="f_nand" type="number" min="1" step="1"></div><div><small class="mu">Fecha de solicitud (vacía = pendiente)</small><input id="f_fsol" type="date"></div></div><div class="yn"><button onclick="back()">Atrás</button><button class="p" onclick="done('nand',['nand','fsol'])">Continuar</button></div>';
+   h+='<div class="q">Requerimiento de andamiaje</div><div class="f"><div><small class="mu">Cantidad de andamios</small><input id="f_nand" type="number" min="1" step="1"></div><div><small class="mu">Fecha de solicitud (vacía = pendiente)</small><input id="f_fsol" type="date"></div></div><div class="yn"><button onclick="back()">Atrás</button><button class="p" onclick="done(\'nand\',[\'nand\',\'fsol\'])">Continuar</button></div>';
  } else {
-   h+='<div class="q">Medio de acceso especial</div><textarea id="f_otro" rows="3" placeholder="Canastilla, pluma, escalera de extensión, etc."></textarea><div class="yn"><button onclick="back()">Atrás</button><button class="p" onclick="done('otro',['otro'])">Continuar</button></div>';
+   h+='<div class="q">Medio de acceso especial</div><textarea id="f_otro" rows="3" placeholder="Canastilla, pluma, escalera de extensión, etc."></textarea><div class="yn"><button onclick="back()">Atrás</button><button class="p" onclick="done(\'otro\',[\'otro\'])">Continuar</button></div>';
  }
  return h+'</div>';
 }
@@ -785,7 +799,7 @@ function goSf(k){sf=k;flt='all';tab='ev';cur=null;draw()}
 
 function lista(){
  const L=getFilteredList();
- return'<div class="c"><select id="pf" style="margin-bottom:8px" onchange="pf=this.value;try{localStorage.setItem(K+'p',pf)}catch(e){}draw()"><option value="">Todas las plantas</option>'+[...new Set(D.map(r=>r.pl))].sort().map(p=>'<option'+(p===pf?' selected':'')+'>'+esc(p)+'</option>').join('')+'</select><select id="sf" style="margin-bottom:8px" onchange="sf=this.value;if(sf)flt='all';draw()">'+sfOpts()+'</select><input id="q" placeholder="Buscar por código de isométrico..." value="'+esc(q)+'" oninput="q=this.value;lst()"><div class="f" style="margin:8px 0 0"><button class="'+(flt==='pend'?'p':'')+'" onclick="flt='pend';draw()">Sin evaluar</button><button class="'+(flt==='done'?'p':'')+'" onclick="flt='done';draw()">Evaluados</button><button class="'+(flt==='work'?'p':'')+'" onclick="flt='work';draw()">Por trabajar</button><button class="'+(flt==='all'?'p':'')+'" onclick="flt='all';draw()">Todos</button></div><div class="sort-bar"><button class="'+(srt==='pr'?'p':'')+'" onclick="setSort('pr')">Orden: Prioridad</button><button class="'+(srt==='mt'?'p':'')+'" onclick="setSort('mt')">Mayor Metraje</button><button class="'+(srt==='dias'?'p':'')+'" onclick="setSort('dias')">Más Antiguos</button></div><div class="mu" style="margin-top:8px;font-size:11px;font-weight:700;text-transform:uppercase">'+L.length+' isométricos listados'+(info?' · '+esc(info):'')+'</div><div class="l" id="ls">'+rows(L)+'</div></div>';
+ return'<div class="c"><select id="pf" style="margin-bottom:8px" onchange="pf=this.value;try{localStorage.setItem(K+\'p\',pf)}catch(e){}draw()"><option value="">Todas las plantas</option>'+[...new Set(D.map(r=>r.pl))].sort().map(p=>'<option'+(p===pf?' selected':'')+'>'+esc(p)+'</option>').join('')+'</select><select id="sf" style="margin-bottom:8px" onchange="sf=this.value;if(sf)flt=\'all\';draw()">'+sfOpts()+'</select><input id="q" placeholder="Buscar por código de isométrico..." value="'+esc(q)+'" oninput="q=this.value;lst()"><div class="f" style="margin:8px 0 0"><button class="'+(flt==='pend'?'p':'')+'" onclick="flt=\'pend\';draw()">Sin evaluar</button><button class="'+(flt==='done'?'p':'')+'" onclick="flt=\'done\';draw()">Evaluados</button><button class="'+(flt==='work'?'p':'')+'" onclick="flt=\'work\';draw()">Por trabajar</button><button class="'+(flt==='all'?'p':'')+'" onclick="flt=\'all\';draw()">Todos</button></div><div class="sort-bar"><button class="'+(srt==='pr'?'p':'')+'" onclick="setSort(\'pr\')">Orden: Prioridad</button><button class="'+(srt==='mt'?'p':'')+'" onclick="setSort(\'mt\')">Mayor Metraje</button><button class="'+(srt==='dias'?'p':'')+'" onclick="setSort(\'dias\')">Más Antiguos</button></div><div class="mu" style="margin-top:8px;font-size:11px;font-weight:700;text-transform:uppercase">'+L.length+' isométricos listados'+(info?' · '+esc(info):'')+'</div><div class="l" id="ls">'+rows(L)+'</div></div>';
 }
 
 function rows(L){
@@ -807,7 +821,7 @@ function dash(){
  const pa=ev.filter(r=>S[r.iso].and==='Sí'&&S[r.iso].plat==='No').reduce((s,r)=>s+(+S[r.iso].nand||0),0);
  const sa=ev.filter(r=>S[r.iso].res==='Pendiente solicitud de andamio'&&dEv(S[r.iso])>=AL);
 
- let h='<div class="c" style="margin-bottom:14px"><div class="f" style="margin:0;align-items:center"><div style="flex:2"><b>Resumen General de Obra</b><div class="mu">'+(pf?'Planta '+esc(pf):'Todas las plantas registradas')+'</div></div><div><small class="mu">Alerta andamios ≥</small><input type="number" min="1" value="'+AL+'" style="width:70px;display:inline;margin-left:6px" onchange="AL=Math.max(1,+this.value||3);try{localStorage.setItem(K+'a',AL)}catch(e){}draw()"> días</div></div></div>';
+ let h='<div class="c" style="margin-bottom:14px"><div class="f" style="margin:0;align-items:center"><div style="flex:2"><b>Resumen General de Obra</b><div class="mu">'+(pf?'Planta '+esc(pf):'Todas las plantas registradas')+'</div></div><div><small class="mu">Alerta andamios ≥</small><input type="number" min="1" value="'+AL+'" style="width:70px;display:inline;margin-left:6px" onchange="AL=Math.max(1,+this.value||3);try{localStorage.setItem(K+\'a\',AL)}catch(e){}draw()"> días</div></div></div>';
 
  h+='<div class="kp">';
  h+='<div class="c"><span>Elegibles</span><b>'+tot+'</b></div>';
@@ -820,7 +834,7 @@ function dash(){
  h+='<div class="c bl"><span>Trabajados</span><b>'+n('Trabajado')+'</b></div>';
  h+='<div class="c ok"><span>Liberados</span><b>'+n('Liberado')+'</b></div>';
  h+='<div class="c er"><span>Andamios demorados</span><b>'+sa.length+'</b></div>';
- h+='<div class="c er" style="cursor:pointer" onclick="tab='al';draw()"><span>Soportes en Alerta</span><b>'+alertas().length+'</b></div>';
+ h+='<div class="c er" style="cursor:pointer" onclick="tab=\'al\';draw()"><span>Soportes en Alerta</span><b>'+alertas().length+'</b></div>';
  h+='</div>';
 
  const mx=Math.max(1,...R.map(n));
@@ -830,6 +844,10 @@ function dash(){
  h+='<div class="c" style="margin-top:14px"><b>Balance por Prioridad Base</b><div class="tw"><table><tr><th>Prioridad</th><th>Elegibles</th><th>Evaluados</th>'+R.map(k=>'<th>'+k+'</th>').join('')+'</tr>'+P.map(p=>{const x=V().filter(r=>r.pr===p),e=x.filter(r=>S[r.iso]);return'<tr><td>'+p+'</td><td>'+x.length+'</td><td>'+e.length+'</td>'+R.map(k=>'<td>'+e.filter(r=>ef(S[r.iso])===k).length+'</td>').join('')+'</tr>'}).join('')+'</table></div></div>';
 
  h+='<div class="c" style="margin-top:14px"><b>Metraje Lineal por Unidad</b><div class="tw"><table><tr><th>Unidad</th><th>Isométricos</th><th>Metros Elegibles</th><th>Mts por trabajar</th><th>Mts trabajados</th><th>Mts liberados</th></tr>'+mu().map(r=>'<tr><td>'+esc(r[0])+'</td><td>'+r[1]+'</td>'+r.slice(2).map(v=>'<td>'+m1(v)+' m</td>').join('')+'</tr>').join('')+'</table></div></div>';
+
+ const mat=ev.filter(r=>S[r.iso].res==='No alineable por falta de material'),and=ev.filter(r=>S[r.iso].res==='Pendiente por andamio'||S[r.iso].res==='Pendiente solicitud de andamio');
+ h+='<div class="c" style="margin-top:14px"><b>Soportes por conseguir (Falta de material)</b>'+(mat.length?'<div class="tw"><table><tr><th>Isométrico</th><th>Complejidad</th><th>Descripción del soporte faltante</th></tr>'+mat.map(r=>'<tr><td>'+esc(r.iso)+'</td><td>'+esc(S[r.iso].cmplx||'Media')+'</td><td style="white-space:normal">'+esc(S[r.iso].desc)+'</td></tr>').join('')+'</table></div>':'<p class="mu">Sin casos registrados.</p>')+'</div>';
+ h+='<div class="c" style="margin-top:14px"><b>Andamios pendientes</b>'+(and.length?'<div class="tw"><table><tr><th>Isométrico</th><th>Andamios</th><th>Status</th><th>Fecha de solicitud</th><th>Días sin solicitar</th></tr>'+and.map(r=>{const s=S[r.iso],so=s.res==='Pendiente solicitud de andamio';return'<tr><td>'+esc(r.iso)+'</td><td>'+esc(s.nand)+'</td><td>'+esc(ef(s))+'</td><td>'+(s.fsol||'—')+'</td><td class="'+(so&&dEv(s)>=AL?'er':'')+'">'+(so?dEv(s)+(dEv(s)>=AL?' ⚠':''):'—')+'</td></tr>'}).join('')+'</table></div>':'<p class="mu">Sin casos registrados.</p>')+'</div>';
  return h;
 }
 
@@ -937,7 +955,7 @@ function pg(){
  const pctProg = Math.min(100, Math.round((totProg / (metaDia||1)) * 100));
  const pctDone = Math.min(100, Math.round((totDone / (metaDia||1)) * 100));
 
- let h='<div class="c"><div class="f"><div><small class="mu">Fecha de ejecución</small><input type="date" value="'+pd+'" onchange="pd=this.value||hoy();draw()"></div><div><small class="mu">Meta Diaria de Frente (m)</small><input type="number" min="10" step="10" value="'+metaDia+'" onchange="metaDia=Math.max(1,+this.value||120);try{localStorage.setItem(K+'m',metaDia)}catch(e){}draw()"></div><div style="display:flex;align-items:flex-end"><button class="p" onclick="shr()">Compartir WhatsApp</button></div></div>';
+ let h='<div class="c"><div class="f"><div><small class="mu">Fecha de ejecución</small><input type="date" value="'+pd+'" onchange="pd=this.value||hoy();draw()"></div><div><small class="mu">Meta Diaria de Frente (m)</small><input type="number" min="10" step="10" value="'+metaDia+'" onchange="metaDia=Math.max(1,+this.value||120);try{localStorage.setItem(K+\'m\',metaDia)}catch(e){}draw()"></div><div style="display:flex;align-items:flex-end"><button class="p" onclick="shr()">Compartir WhatsApp</button></div></div>';
  
  h+='<div style="margin:12px 0 8px"><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;text-transform:uppercase"><span class="mu">Progreso vs Meta ('+m1(metaDia)+' m)</span><span>Programado: '+m1(totProg)+' m ('+pctProg+'%) · <span style="color:var(--accent)">Terminado: '+m1(totDone)+' m ('+pctDone+'%)</span></span></div><div class="goal-track"><div class="goal-fill-prog" style="width:'+pctProg+'%"></div><div class="goal-fill-done" style="width:'+pctDone+'%"></div></div></div>';
  
@@ -945,7 +963,7 @@ function pg(){
 
  h+='<div class="c" style="margin-top:14px"><b>Actividades Asignadas para el Día</b>'+(day.length?day.map(k=>{
    const x=S[k],w=clash(k);
-   return'<div style="padding:12px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--font-mono);font-size:15px">'+esc(k)+'</b><span class="b '+({'Programada':'mu','En proceso':'wa','Terminada':'ok'})[x.pest]+'">'+esc(x.pest)+'</span></div><div class="mu" style="margin:4px 0">'+esc(x.pcuad||'Sin cuadrilla')+' · '+esc(eqName(x.peq)||'Sin equipo')+' · Complejidad: '+esc(x.cmplx||'Media')+' · '+m1(x.mt)+' m</div>'+(w?'<div class="er" style="margin:4px 0;font-weight:700">'+esc(w)+'</div>':'')+sblock(k)+(x.pnota?'<div class="mu" style="margin:4px 0">Nota: '+esc(x.pnota)+'</div>':'')+'<div class="f" style="margin:8px 0 4px"><button data-k="'+esc(k)+'" onclick="pset(this.dataset.k,'En proceso')">Iniciar</button><button class="p" data-k="'+esc(k)+'" onclick="pset(this.dataset.k,'Terminada')">Terminada</button><button data-k="'+esc(k)+'" onclick="pun(this.dataset.k)">Reprogramar</button></div><div class="f" style="margin:0"><input placeholder="Retroalimentación de campo" value="'+esc(x.pnota||'')+'"><button data-k="'+esc(k)+'" onclick="pnota(this)" style="flex:0 0 auto">Guardar</button></div></div>';
+   return'<div style="padding:12px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--font-mono);font-size:15px">'+esc(k)+'</b><span class="b '+({'Programada':'mu','En proceso':'wa','Terminada':'ok'})[x.pest]+'">'+esc(x.pest)+'</span></div><div class="mu" style="margin:4px 0">'+esc(x.pcuad||'Sin cuadrilla')+' · '+esc(eqName(x.peq)||'Sin equipo')+' · Complejidad: '+esc(x.cmplx||'Media')+' · '+m1(x.mt)+' m</div>'+(w?'<div class="er" style="margin:4px 0;font-weight:700">'+esc(w)+'</div>':'')+sblock(k)+(x.pnota?'<div class="mu" style="margin:4px 0">Nota: '+esc(x.pnota)+'</div>':'')+'<div class="f" style="margin:8px 0 4px"><button data-k="'+esc(k)+'" onclick="pset(this.dataset.k,\'En proceso\')">Iniciar</button><button class="p" data-k="'+esc(k)+'" onclick="pset(this.dataset.k,\'Terminada\')">Terminada</button><button data-k="'+esc(k)+'" onclick="pun(this.dataset.k)">Reprogramar</button></div><div class="f" style="margin:0"><input placeholder="Retroalimentación de campo" value="'+esc(x.pnota||'')+'"><button data-k="'+esc(k)+'" onclick="pnota(this)" style="flex:0 0 auto">Guardar</button></div></div>';
  }).join(''):'<p class="mu" style="margin-top:10px">No hay actividades programadas para este día.</p>')+'</div>';
 
  h+='<div class="c" style="margin-top:14px"><b>Bandeja por Programar</b> <span class="mu">('+sin.length+' trabajables sin asignar)</span>';
@@ -1162,12 +1180,12 @@ function reab(i,c){const s=S[i];if(s.cerr)delete s.cerr[c];lg(s,'Alerta soporte 
 
 function bn(){
  const a=alertas();if(!a.length)return'';const e=a.filter(x=>x.exc).length;
- return'<div class="c er" style="margin-bottom:12px;cursor:pointer;border:1px solid currentColor" onclick="tab='al';draw()"><b>Atención: '+a.length+' soportes por instalar</b>'+(e?' ('+e+' con excepción)':'')+' · Toca para abrir bandeja</div>';
+ return'<div class="c er" style="margin-bottom:12px;cursor:pointer;border:1px solid currentColor" onclick="tab=\'al\';draw()"><b>Atención: '+a.length+' soportes por instalar</b>'+(e?' ('+e+' con excepción)':'')+' · Toca para abrir bandeja</div>';
 }
 
 function al(){
  const a=alertas();
- let h='<div class="c"><div class="f" style="margin:0;align-items:center"><b style="flex:1">Control de Soportes en Alerta</b><button onclick="tab='ev';draw()">Regresar</button><button class="p" onclick="shA()">Compartir</button></div><div class="mu" style="font-size:12px;margin-top:6px">Seguimiento de soportes asignados pendientes de instalación. Las liberadas en el checklist se indican listas para cierre.</div></div>';
+ let h='<div class="c"><div class="f" style="margin:0;align-items:center"><b style="flex:1">Control de Soportes en Alerta</b><button onclick="tab=\'ev\';draw()">Regresar</button><button class="p" onclick="shA()">Compartir</button></div><div class="mu" style="font-size:12px;margin-top:6px">Seguimiento de soportes asignados pendientes de instalación. Las liberadas en el checklist se indican listas para cierre.</div></div>';
  if(!a.length)return h+'<div class="c" style="margin-top:14px">Sin alertas vigentes.</div>';
  return h+'<div class="c" style="margin-top:14px"><div class="tw"><table><tr><th>Isométrico</th><th>Soporte</th><th>Checklist</th><th>Días</th><th>Material Recibido</th><th>Excepción</th><th>Acción</th></tr>'+a.map(x=>'<tr><td>'+esc(x.iso)+'</td><td style="white-space:normal">'+esc(x.c)+' · '+esc(x.d)+'</td><td class="'+(x.ok?'ok':'')+'" style="white-space:normal">'+(x.ok?'Liberado'+(x.inst?' el '+esc(x.inst):''):esc(x.est))+'</td><td class="'+(x.exc?'er':'')+'">'+x.dias+' d</td><td>'+esc(x.rec||'—')+'</td><td style="white-space:normal">'+(x.exc?esc(x.exc.m):'—')+'</td><td><button class="p" data-i="'+esc(x.iso)+'" data-c="'+esc(x.c)+'" onclick="cerrar(this.dataset.i,this.dataset.c)">Cerrar</button></td></tr>').join('')+'</table></div></div>';
 }
