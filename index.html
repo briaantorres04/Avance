@@ -48,7 +48,6 @@
 }
 
 :root[data-theme="light"] {
-  /* PALETA MODO SOL (Alto contraste para obra bajo sol directo) */
   --bg: #eaedea;
   --surface: #ffffff;
   --surface-alt: #f1f4f0;
@@ -88,7 +87,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* HEADER EDITORIAL */
 header {
   display: flex;
   flex-wrap: wrap;
@@ -185,7 +183,7 @@ a.btnlink{display:inline-block;font-size:13px;font-weight:700;text-transform:upp
 select.sps{width:auto;min-height:40px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer}
 body::before{content:"";position:fixed;inset:0 0 auto 0;height:env(safe-area-inset-top,0px);background:var(--surface);z-index:21}
 @media (pointer:coarse){input,select,textarea{font-size:16px;min-height:44px}button{min-height:44px;font-size:13px;padding:10px 14px}.b{font-size:12px}}
-/* INDICADOR DE CAMBIOS NO RESPALDADOS */
+
 .unsaved-badge {
   display: inline-block;
   margin-left: 6px;
@@ -213,7 +211,6 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--accent);
 }
 
-/* COMPLEJIDAD SELECTOR SEGMENTADO */
 .cmplx-group {
   display: flex;
   gap: 6px;
@@ -234,7 +231,6 @@ input:focus, select:focus, textarea:focus {
 .cmplx-btn.active[data-c="Alta"] { background: var(--er-bg); color: var(--er); border-color: var(--er); }
 .cmplx-btn.active[data-c="Crítica"] { background: var(--accent); color: var(--tx-on-accent); border-color: var(--accent); }
 
-/* ORDENAMIENTO RAPIDO */
 .sort-bar {
   display: flex;
   gap: 4px;
@@ -246,7 +242,6 @@ input:focus, select:focus, textarea:focus {
   font-size: 10px;
 }
 
-/* LAYOUT PRINCIPAL */
 main {
   padding: 16px 20px;
   max-width: 1380px;
@@ -429,7 +424,6 @@ main {
   min-width: 2px;
 }
 
-/* BARRA DE META DIARIA */
 .goal-track {
   width: 100%;
   height: 10px;
@@ -580,6 +574,11 @@ const sv=(markChange=true)=>{
     localStorage.setItem(K+'q',JSON.stringify(QD));
     localStorage.setItem(K+'sc',JSON.stringify(SPC));
     updateUnsavedUI();
+    
+    // Registrar sincronización en segundo plano automática si hay soporte
+    if('serviceWorker' in navigator && 'SyncManager' in window){
+      navigator.serviceWorker.ready.then(reg => reg.sync.register('sincronizar-cambios-pendientes').catch(()=>{}));
+    }
   }catch(e){}
 };
 
@@ -758,7 +757,6 @@ function panel(){
  h+='<div class="c">';
  h+='<div class="f" style="margin-top:0"><div><small class="mu" style="font-weight:700;text-transform:uppercase;font-size:10px">Supervisor a cargo</small><input id="sup" value="'+esc(sup)+'" placeholder="Nombre del supervisor" oninput="sup=this.value;sv(false)"></div></div>';
 
- /* Nivel de Complejidad técnico */
  h+='<div style="margin:12px 0"><small class="mu" style="font-weight:700;text-transform:uppercase;font-size:10px">Nivel de Complejidad Técnico</small><div class="cmplx-group">';
  ['Baja','Media','Alta','Crítica'].forEach(lvl=>{
    const act = curCmplx === lvl ? 'active' : '';
@@ -1077,7 +1075,7 @@ let _spT=null;
 function saveSP(){clearTimeout(_spT);_spT=setTimeout(()=>idb('s',{d:SP,i:spi}).catch(()=>{}),600)}
 function setSp(it,c){
   it[2]=c.e;it[10]=false;it[11]=c.f;
-  if(c.e==='Instalado'||c.e==='Liberado'){it[3]=it[4];it[6]=c.f;if(c.s)it[5]=c.s}else{it[3]=0;it[6]=''}
+  if(c.e==='Instalado'||c.e==='Liberado'){it[3]=it[4];it[6]=c.f;if(c.s)it[5]=c.s}else{it[3]=0;it[6]=''};
   if(c.m&&!String(it[9]).includes(c.m))it[9]=(it[9]?it[9]+' | ':'')+'Rechazo: '+c.m;
 }
 function applyChanges(prune){
@@ -1160,7 +1158,7 @@ function alertas(){
      o.push({iso:k,c:x[0],d:x[1],est:x[2],ok:okS(x),inst:x[6],exc:e,rec:x[7],dias:Math.max(0,Math.floor((Date.now()-new Date((e?e.f:s.pfecha)+'T00:00'))/864e5))});
    }
  }
- return o.sort((p,q)=>(q.exc?1:0)-(p.exc?1:0)||q.dias-p.dias);
+ return o.sort((p,q)=>(q.exc?1:0)-(q.exc?1:0)||q.dias-p.dias);
 }
 
 function cerrar(i,c){
@@ -1308,7 +1306,23 @@ idb('g').then(v=>{
  }
 }).catch(()=>{});
 
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+// Sincronización automática de red y Service Worker
+window.addEventListener('online', () => {
+  console.log("Conexión recuperada: sincronizando datos pendientes.");
+  draw();
+});
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    navigator.serviceWorker.addEventListener('message', event => {
+      if(event.data && event.data.type === 'SYNC_NOW'){
+        console.log("Ejecutando sincronización automática en segundo plano...");
+        draw();
+      }
+    });
+  }).catch(()=>{});
+}
+
 draw();
 </script>
 </body>
