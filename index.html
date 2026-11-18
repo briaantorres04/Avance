@@ -124,6 +124,27 @@ header {
   letter-spacing: 0.05em;
 }
 
+/* Indicador de conexión en tiempo real */
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.online { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.dot.offline { background: var(--wa); box-shadow: 0 0 6px var(--wa); }
+
 .nav-group {
   display: flex;
   align-items: center;
@@ -170,7 +191,8 @@ button {
   border-radius: 0px;
   transition: all 0.15s ease;
 }
-button:hover { background: var(--surface-elevated); }
+button:hover { background: var(--surface-elevated); transform: translateY(-1px); }
+button:active { transform: translateY(0); }
 button.p {
   background: var(--accent);
   color: var(--tx-on-accent);
@@ -262,22 +284,23 @@ main {
   padding: 16px;
 }
 
+/* Tarjetas optimizadas para lista lateral */
 .li {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   background: var(--surface);
-  transition: background 0.15s ease;
+  transition: all 0.15s ease;
 }
-.li:hover { background: var(--surface-alt); }
+.li:hover { background: var(--surface-alt); padding-left: 16px; }
 .li.s {
   background: var(--surface-alt);
-  border-left: 3px solid var(--accent);
+  border-left: 4px solid var(--accent);
 }
 .li b {
   font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 800;
   letter-spacing: -0.01em;
 }
 .li small {
@@ -306,6 +329,35 @@ main {
 .er { color: var(--er); background: var(--er-bg); }
 .bl { color: var(--bl); background: var(--bl-bg); }
 .mu { color: var(--tx-muted); }
+
+/* Sistema de Notificaciones Toast Flotantes */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  background: var(--surface-elevated);
+  color: var(--tx-main);
+  border: 1px solid var(--border-strong);
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  animation: slideIn 0.2s ease-out forwards;
+  max-width: 320px;
+}
+.toast.ok { border-left: 4px solid var(--ok); }
+.toast.er { border-left: 4px solid var(--er); }
+.toast.wa { border-left: 4px solid var(--wa); }
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
 
 .iso-header-box {
   background: var(--surface-alt);
@@ -496,6 +548,11 @@ details summary {
     <span class="sub">Control de Isométricos</span>
   </div>
 
+  <div class="connection-status" id="conn_status">
+    <span class="dot online" id="conn_dot"></span>
+    <span id="conn_text">En línea</span>
+  </div>
+
   <div class="nav-group">
     <button id="t1" class="on">Evaluar</button>
     <button id="t2">Dashboard</button>
@@ -514,6 +571,7 @@ details summary {
 </header>
 
 <div id="bx" class="c" style="display:none;position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:99;border:1px solid var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.6)"></div>
+<div id="toast-container"></div>
 
 <main id="m"></main>
 
@@ -522,7 +580,6 @@ details summary {
 let D=[],info='',pf='',sf='',fltCmplx='',AL=3,EQ=[],QD=[],pa=null,pd='',SP={},spi='',unsaved=0,metaDia=120,srt='pr',spO={},SPC=[];
 const K='evalAlin1';let S={},sup='';
 
-/* Lista de supervisores autorizados para control en campo */
 const SUPERVISORES_AUTORIZADOS = [
   "Brian Torres Silva",
   "Supervisor Turno A",
@@ -530,6 +587,34 @@ const SUPERVISORES_AUTORIZADOS = [
   "Residente de Piping",
   "Control de Calidad"
 ];
+
+function showToast(text, type='ok') {
+  const container = $('toast-container');
+  if(!container) return;
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = text;
+  container.appendChild(t);
+  setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transition = 'opacity 0.2s ease';
+    setTimeout(() => t.remove(), 200);
+  }, 3000);
+}
+
+function updateConnectionStatus(){
+  const dot = $('conn_dot'), text = $('conn_text');
+  if(!dot || !text) return;
+  if(navigator.onLine){
+    dot.className = 'dot online';
+    text.textContent = 'En línea';
+  } else {
+    dot.className = 'dot offline';
+    text.textContent = 'Modo Offline';
+  }
+}
+window.addEventListener('online', updateConnectionStatus);
+window.addEventListener('offline', updateConnectionStatus);
 
 function initTheme(){
   const saved = localStorage.getItem(K+'_theme') || 'dark';
@@ -685,7 +770,7 @@ function done(k,fields){
 }
 
 function est(k){
- const s=S[cur.iso],t=hoy(),e=m=>{msg=m;draw()};
+ const s=S[cur.iso],t=hoy(),e=m=>{msg=m;showToast(m,'er');draw()};
  if(!sup)return e('Selecciona o escribe el supervisor.');
  if(k==='Trabajado'){
    if(s.res!=='Trabajable')return e('Solo se puede marcar Trabajado si el resultado es Trabajable.');
@@ -700,23 +785,23 @@ function est(k){
    if(s.pest==='Terminada')s.pest='En proceso';
  }
  lg(s,k==='back'?'Avance retrocedido':'Marcado '+k);
- sv();msg='Estatus actualizado.';draw();
+ sv();msg='Estatus actualizado.';showToast('Estatus actualizado a '+k,'ok');draw();
 }
 
 function cic(k){
- const s=S[cur.iso],e=m=>{msg=m;draw()};
+ const s=S[cur.iso],e=m=>{msg=m;showToast(m,'er');draw()};
  if(!sup)return e('Selecciona o escribe el supervisor.');
  if(k==='sol'){const f=$('f_fs').value||hoy();s.fsol=f;s.res='Pendiente por andamio';lg(s,'Andamio solicitado el '+f)}
  else if(k==='and'){s.res='Trabajable';lg(s,'Andamio instalado')}
  else if(k==='mat'){s.res='Trabajable';lg(s,'Material recibido')}
  else if(k==='acc'){s.res='Trabajable';lg(s,'Acceso resuelto')}
  else{const t=$('f_nota').value.trim();s.nota=t;lg(s,t?'Nota: '+t:'Nota borrada')}
- sv();msg='Actualizado.';draw();
+ sv();msg='Actualizado.';showToast('Actualización guardada','ok');draw();
 }
 
 function capturarGeoAuditoria() {
   if (!navigator.geolocation) {
-    alert('La geolocalización no está soportada en este navegador.');
+    showToast('La geolocalización no está soportada','er');
     return;
   }
   navigator.geolocation.getCurrentPosition(position => {
@@ -725,13 +810,13 @@ function capturarGeoAuditoria() {
     if(cur && S[cur.iso]) {
       lg(S[cur.iso], `Auditoría GPS registrada: Lat ${lat}, Lon ${lon}`);
       sv();
-      alert(`¡Coordenadas GPS registradas correctamente en el historial!\nLat: ${lat}, Lon: ${lon}`);
+      showToast('¡Coordenadas GPS registradas en bitácora!','ok');
       draw();
     } else {
-      alert(`Coordenadas obtenidas: Lat ${lat}, Lon ${lon} (Selecciona un isométrico para asociarlas).`);
+      showToast(`GPS: Lat ${lat}, Lon ${lon} (Selecciona un isométrico)`, 'wa');
     }
   }, () => {
-    alert('No se pudo obtener la ubicación GPS. Verifica los permisos del dispositivo.');
+    showToast('No se pudo obtener la ubicación GPS','er');
   }, { timeout: 10000 });
 }
 
@@ -747,7 +832,7 @@ function ext(s){
 }
 
 function guardar(irSiguiente=false){
- if(!sup){msg='Selecciona o escribe el supervisor.';draw();return}
+ if(!sup){msg='Selecciona o escribe el supervisor.';showToast(msg,'er');draw();return}
  const LBefore = getFilteredList();
  const curIdx = LBefore.findIndex(([r])=>r.iso===cur.iso);
  
@@ -771,12 +856,13 @@ function guardar(irSiguiente=false){
    if(nextItem){
      cur = D[nextItem[1]];
      a = S[cur.iso] ? null : {h:[],cmplx:'Media'};
-     msg = 'Evaluación previa guardada. Siguiente isométrico cargado.';
+     msg = 'Evaluación guardada. Siguiente cargado.';
+     showToast(msg,'ok');
      draw();
      return;
    }
  }
- a=null;msg='Evaluación guardada con éxito.';draw();
+ a=null;msg='Evaluación guardada con éxito.';showToast(msg,'ok');draw();
 }
 
 function panel(){
@@ -789,7 +875,6 @@ function panel(){
  
  h+='<div class="c">';
  
- /* Control de Supervisor Autorizado y GPS */
  h+='<div class="f" style="margin-top:0">';
  h+='<div><small class="mu" style="font-weight:700;text-transform:uppercase;font-size:10px">Supervisor a cargo</small>';
  h+='<select id="sup_select" onchange="sup=this.value;sv(false);draw()" style="margin-bottom:4px"><option value="">-- Seleccionar supervisor autorizado --</option>'+SUPERVISORES_AUTORIZADOS.map(n=>'<option'+(n===sup?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select>';
@@ -1100,7 +1185,7 @@ function sdesc(x){
 
 function soportes(t,name){
  const R=csv(t),H=R[0]||[],ix=n=>H.indexOf(n);
- if(ix('Isometrico')<0||ix('Soporte')<0||ix('Estado')<0){alert('El archivo no contiene las columnas requeridas (Isometrico, Soporte, Estado).');return}
+ if(ix('Isometrico')<0||ix('Soporte')<0||ix('Estado')<0){showToast('El archivo no contiene las columnas requeridas.','er');return}
  const o={};
  for(const r of R.slice(1)){
    const i=r[ix('Isometrico')];if(!i)continue;const ob=r[ix('Observaciones')]||'';
@@ -1108,13 +1193,13 @@ function soportes(t,name){
  }
  for(const k of sched()){const z=S[k];if(!z.sp0){const a0=spOf(k);if(a0)z.sp0=pendS(a0).map(y=>y[0])}}
  SP=o;const ap=applyChanges(true);sv(false);spi='Checklist: '+name+' · '+hoy();
- idb('s',{d:SP,i:spi}).catch(()=>alert('Cargados en memoria local temporal.'));
+ idb('s',{d:SP,i:spi}).catch(()=>showToast('Cargados en memoria local temporal.','wa'));
  const n=Object.values(SP).reduce((a,b)=>a+b.length,0);cur=null;draw();
- alert(n+' soportes de '+Object.keys(SP).length+' isométricos importados.'+(ap.re?' Se volvieron a aplicar '+ap.re+' cambios hechos en la app.':'')+(ap.ab?' '+ap.ab+' cambios ya estaban en el checklist y se descartaron.':''));
+ showToast(n+' soportes importados con éxito.','ok');
 }
 
 function exportarCSV(){
-  if(!Object.keys(SP).length){alert('No hay datos de soportes cargados para exportar.');return}
+  if(!Object.keys(SP).length){showToast('No hay datos de soportes cargados para exportar.','er');return}
   const solo=SPC.length>0&&confirm('Hay '+SPC.length+' cambios de soportes hechos en la app.\n\nAceptar = exportar solo esos cambios.\nCancelar = exportar todo el checklist.');
   const cols=['Isometrico','Soporte','Descripcion','Estado','Cantidad completada','Cantidad total','Responsable','Fecha liberacion','Observaciones','Tiene foto','Ultima actualizacion'];
   const escCSV=v=>{const t=String(v==null?'':v);return(t.includes(',')||t.includes('"')||t.includes('\n'))?'"'+t.replace(/"/g,'""')+'"':t};
@@ -1130,6 +1215,7 @@ function exportarCSV(){
   const name=(solo?'Cambios_Soportes_':'Checklist_Soportes_Actualizado_')+hoy()+'.csv';
   const url=URL.createObjectURL(blob),aEl=document.createElement('a');
   aEl.href=url;aEl.download=name;document.body.appendChild(aEl);aEl.click();document.body.removeChild(aEl);
+  showToast('Archivo CSV exportado','ok');
 }
 
 let _spT=null;
@@ -1166,6 +1252,7 @@ function cambiarEstSoporte(iso,cod,nuevo){
   setSp(it,c);
   const sx=S[iso];if(sx)lg(sx,'Soporte '+cod+': '+prev+' → '+nuevo+(motivo?' ('+motivo+')':''));
   sv();saveSP();draw();
+  showToast('Soporte '+cod+' actualizado a '+nuevo,'ok');
 }
 
 function sblock(iso){
@@ -1207,6 +1294,7 @@ function exc(i,c){
    lg(s,'Excepción soporte '+c+': '+m.trim());
  }
  spO[i]=true;sv();draw();
+ showToast('Excepción actualizada','ok');
 }
 
 function alertas(){
@@ -1228,8 +1316,9 @@ function cerrar(i,c){
  s.cerr=s.cerr||{};s.cerr[c]={f:hoy(),n:n.trim()};
  lg(s,'Alerta soporte '+c+' cerrada'+(n.trim()?': '+n.trim():''));
  sv();draw();
+ showToast('Alerta cerrada','ok');
 }
-function reab(i,c){const s=S[i];if(s.cerr)delete s.cerr[c];lg(s,'Alerta soporte '+c+' reabierta');spO[i]=true;sv();draw()}
+function reab(i,c){const s=S[i];if(s.cerr)delete s.cerr[c];lg(s,'Alerta soporte '+c+' reabierta');spO[i]=true;sv();draw();showToast('Alerta reabierta','wa')}
 
 function bn(){
  const a=alertas();if(!a.length)return'';const e=a.filter(x=>x.exc).length;
@@ -1258,7 +1347,7 @@ function hint(k){
 const ISO=x=>x instanceof Date?x.toISOString().slice(0,10):typeof x==='number'?new Date(Math.round((x-25569)*864e5)).toISOString().slice(0,10):String(x).slice(0,10);
 const has=v=>v!=null&&String(v).trim()!=='';
 
-function respaldoOk(){unsaved=0;try{localStorage.setItem(K+'u',0)}catch(e){}updateUnsavedUI()}
+function respaldoOk(){unsaved=0;try{localStorage.setItem(K+'u',0)}catch(e){}updateUnsavedUI();showToast('Respaldo confirmado','ok')}
 function guarda(buf,name){
  const t='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',b=new Blob([buf],{type:t}),u=URL.createObjectURL(b),x=$('bx');
  let f=null;
@@ -1267,6 +1356,7 @@ function guarda(buf,name){
  x.style.display='block';
  if(f)$('shr').onclick=e=>{e.preventDefault();navigator.share({files:[f]}).then(respaldoOk).catch(()=>{})};
  $('cl').onclick=e=>{e.preventDefault();x.style.display='none'};
+ showToast('Reporte Excel generado','ok');
 }
 
 $('ex').onclick=()=>{
@@ -1295,13 +1385,13 @@ $('ex').onclick=()=>{
   XLSX.utils.book_append_sheet(w,s11,'Cambios soportes');
   
   guarda(XLSX.write(w,{bookType:'xlsx',type:'array'}),'Evaluacion_alineacion_'+new Date().toLocaleDateString('en-CA')+'.xlsx');
- } catch(e){ alert('Error al generar el libro de Excel.'); }
+ } catch(e){ showToast('Error al generar Excel','er'); }
 };
 
 function cargar(buf,name){
  const w=XLSX.read(buf,{type:'array',cellDates:true}),sn=w.SheetNames.find(n=>/alineaci/i.test(n))||w.SheetNames[0];
  const A=XLSX.utils.sheet_to_json(w.Sheets[sn],{header:1,raw:true,defval:null}),hi=A.findIndex(r=>r&&r.includes('Isometrico')&&r.includes('Fecha de Montaje'));
- if(hi<0){alert('Columnas requeridas no encontradas (Isometrico, Fecha de Montaje) en la hoja Alineacion.');return}
+ if(hi<0){showToast('Columnas requeridas no encontradas','er');return}
  const c=n=>A[hi].indexOf(n),ci={k:c('Iso - Cruce'),i:c('Isometrico'),p:c('Planta'),u:c('Unidad'),m:c('Mts'),r:c('Prioridad Base Iso'),fm:c('Fecha de Montaje'),fa:c('Fecha Alineacion')},T={};
  
  for(const r of A.slice(hi+1)){
@@ -1313,12 +1403,12 @@ function cargar(buf,name){
  info='Avance: '+name;
  try{localStorage.setItem(K+'d',JSON.stringify(D));localStorage.setItem(K+'i',info)}catch(e){}
  cur=null;a=null;msg='';tab='ev';draw();
- alert(D.length+' isométricos cargados exitosamente.');
+ showToast(D.length+' isométricos cargados exitosamente.','ok');
 }
 
 function importar(buf){
  const W=XLSX.read(buf,{type:'array'}),s=W.Sheets['Evaluaciones'];
- if(!s){alert('Hoja "Evaluaciones" no encontrada en el archivo.');return}
+ if(!s){showToast('Hoja "Evaluaciones" no encontrada','er');return}
  const A=XLSX.utils.sheet_to_json(s,{header:1,defval:''});let n=0;
  const hRow=A[0]||[],cIx=hRow.indexOf('Complejidad');
  for(const r of A.slice(1)){
@@ -1341,7 +1431,7 @@ function importar(buf){
  rd('Soportes asignados').forEach(r=>{const x=S[r[0]];if(x&&r[1]){x.sp0=x.sp0||[];if(!x.sp0.includes(r[1]))x.sp0.push(r[1])}});
  rd('Cambios soportes').forEach(r=>{if(r[0]&&r[1]&&r[2]){const c={k:r[0],c:r[1],e:r[2],f:String(r[3]),s:r[4]||'',m:r[5]||''},o=SPC.find(z=>z.k===c.k&&z.c===c.c);if(!o)SPC.push(c);else if(c.f>o.f){SPC.splice(SPC.indexOf(o),1);SPC.push(c)}}});
  applyChanges(false);
- sv(false);draw();alert(n+' evaluaciones importadas.');
+ sv(false);draw();showToast(n+' evaluaciones importadas.','ok');
 }
 
 let mode='L';
@@ -1355,10 +1445,11 @@ $('fi').onchange=async e=>{
    if(mode==='S'){soportes(await f.text(),f.name);return}
    const b=await f.arrayBuffer();
    mode==='L'?cargar(b,f.name):importar(b);
- } catch(x){ alert('Error al procesar el archivo seleccionado.'); }
+ } catch(x){ showToast('Error al procesar archivo','er'); }
 };
 
 initTheme();
+updateConnectionStatus();
 idb('g').then(v=>{
  if(v&&v.d){
    SP=v.d;spi=v.i||'';applyChanges(false);
@@ -1367,16 +1458,11 @@ idb('g').then(v=>{
  }
 }).catch(()=>{});
 
-window.addEventListener('online', () => {
-  console.log("Conexión recuperada: sincronizando datos pendientes.");
-  draw();
-});
-
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').then(reg => {
     navigator.serviceWorker.addEventListener('message', event => {
       if(event.data && event.data.type === 'SYNC_NOW'){
-        console.log("Ejecutando sincronización automática en segundo plano...");
+        showToast('Sincronización en segundo plano completada','ok');
         draw();
       }
     });
