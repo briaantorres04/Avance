@@ -16,7 +16,6 @@
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 
-  /* PALETA MODO SOMBRA (Grafito / Bosque oscuro + Lima industrial) */
   --bg: #0c120e;
   --surface: #131a15;
   --surface-alt: #1a241e;
@@ -520,8 +519,17 @@ details summary {
 
 <script src="xlsx.full.min.js"></script>
 <script>
-let D=[],info='',pf='',sf='',AL=3,EQ=[],QD=[],pa=null,pd='',SP={},spi='',unsaved=0,metaDia=120,srt='pr',spO={},SPC=[];
+let D=[],info='',pf='',sf='',fltCmplx='',AL=3,EQ=[],QD=[],pa=null,pd='',SP={},spi='',unsaved=0,metaDia=120,srt='pr',spO={},SPC=[];
 const K='evalAlin1';let S={},sup='';
+
+/* Lista de supervisores autorizados para control en campo */
+const SUPERVISORES_AUTORIZADOS = [
+  "Brian Torres Silva",
+  "Supervisor Turno A",
+  "Supervisor Turno B",
+  "Residente de Piping",
+  "Control de Calidad"
+];
 
 function initTheme(){
   const saved = localStorage.getItem(K+'_theme') || 'dark';
@@ -575,7 +583,6 @@ const sv=(markChange=true)=>{
     localStorage.setItem(K+'sc',JSON.stringify(SPC));
     updateUnsavedUI();
     
-    // Registrar sincronización en segundo plano automática si hay soporte
     if('serviceWorker' in navigator && 'SyncManager' in window){
       navigator.serviceWorker.ready.then(reg => reg.sync.register('sincronizar-cambios-pendientes').catch(()=>{}));
     }
@@ -597,7 +604,12 @@ const dias=r=>Math.max(0,Math.floor((Date.now()-new Date(r.fm+'T00:00'))/864e5))
 const FL={mont:['mont'],coord:['coord'],man:['man','mtipo'],sop:['sop'],mat:['mat'],desc:['desc'],plat:['plat'],and:['and'],nand:['nand','fsol'],otro:['otro']};
 
 function getFilteredList(){
-  const L = D.map((r,i)=>[r,i]).filter(([r])=>fl(r)&&r.iso.toLowerCase().includes(q.toLowerCase()));
+  const L = D.map((r,i)=>[r,i]).filter(([r])=>{
+    if(!fl(r) || !r.iso.toLowerCase().includes(q.toLowerCase())) return false;
+    if(!fltCmplx) return true;
+    const s = S[r.iso];
+    return s && (s.cmplx || 'Media') === fltCmplx;
+  });
   if(srt==='mt') L.sort((a,b)=>b[0].mt - a[0].mt);
   else if(srt==='dias') L.sort((a,b)=>dias(b[0]) - dias(a[0]));
   else L.sort((a,b)=>(a[0].pr+a[0].fm+a[0].iso).localeCompare(b[0].pr+b[0].fm+b[0].iso));
@@ -674,7 +686,7 @@ function done(k,fields){
 
 function est(k){
  const s=S[cur.iso],t=hoy(),e=m=>{msg=m;draw()};
- if(!sup)return e('Escribe el nombre de supervisor.');
+ if(!sup)return e('Selecciona o escribe el supervisor.');
  if(k==='Trabajado'){
    if(s.res!=='Trabajable')return e('Solo se puede marcar Trabajado si el resultado es Trabajable.');
    s.est='Trabajado';s.ftrab=t;delete s.flib;
@@ -693,13 +705,34 @@ function est(k){
 
 function cic(k){
  const s=S[cur.iso],e=m=>{msg=m;draw()};
- if(!sup)return e('Escribe el nombre de supervisor.');
+ if(!sup)return e('Selecciona o escribe el supervisor.');
  if(k==='sol'){const f=$('f_fs').value||hoy();s.fsol=f;s.res='Pendiente por andamio';lg(s,'Andamio solicitado el '+f)}
  else if(k==='and'){s.res='Trabajable';lg(s,'Andamio instalado')}
  else if(k==='mat'){s.res='Trabajable';lg(s,'Material recibido')}
- else if(k==='acc'){s.res='Trabajable';lg(s,'Medio de acceso resuelto')}
+ else if(k==='acc'){s.res='Trabajable';lg(s,'Acceso resuelto')}
  else{const t=$('f_nota').value.trim();s.nota=t;lg(s,t?'Nota: '+t:'Nota borrada')}
  sv();msg='Actualizado.';draw();
+}
+
+function capturarGeoAuditoria() {
+  if (!navigator.geolocation) {
+    alert('La geolocalización no está soportada en este navegador.');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(position => {
+    const lat = position.coords.latitude.toFixed(5);
+    const lon = position.coords.longitude.toFixed(5);
+    if(cur && S[cur.iso]) {
+      lg(S[cur.iso], `Auditoría GPS registrada: Lat ${lat}, Lon ${lon}`);
+      sv();
+      alert(`¡Coordenadas GPS registradas correctamente en el historial!\nLat: ${lat}, Lon: ${lon}`);
+      draw();
+    } else {
+      alert(`Coordenadas obtenidas: Lat ${lat}, Lon ${lon} (Selecciona un isométrico para asociarlas).`);
+    }
+  }, () => {
+    alert('No se pudo obtener la ubicación GPS. Verifica los permisos del dispositivo.');
+  }, { timeout: 10000 });
 }
 
 function ext(s){
@@ -714,7 +747,7 @@ function ext(s){
 }
 
 function guardar(irSiguiente=false){
- if(!sup){msg='Escribe el nombre de supervisor.';draw();return}
+ if(!sup){msg='Selecciona o escribe el supervisor.';draw();return}
  const LBefore = getFilteredList();
  const curIdx = LBefore.findIndex(([r])=>r.iso===cur.iso);
  
@@ -755,7 +788,14 @@ function panel(){
  h+='<div class="iso-stats-grid"><div class="iso-stat-cell"><span>Prioridad</span><b>'+esc(cur.pr)+'</b></div><div class="iso-stat-cell"><span>Complejidad</span><b style="color:var(--accent)">'+esc(curCmplx)+'</b></div><div class="iso-stat-cell"><span>Spools</span><b>'+cur.sp+' pzas</b></div><div class="iso-stat-cell"><span>Longitud</span><b>'+cur.mt+' m</b></div><div class="iso-stat-cell"><span>Últ. Montaje</span><b>'+dias(cur)+' días</b></div></div></div>';
  
  h+='<div class="c">';
- h+='<div class="f" style="margin-top:0"><div><small class="mu" style="font-weight:700;text-transform:uppercase;font-size:10px">Supervisor a cargo</small><input id="sup" value="'+esc(sup)+'" placeholder="Nombre del supervisor" oninput="sup=this.value;sv(false)"></div></div>';
+ 
+ /* Control de Supervisor Autorizado y GPS */
+ h+='<div class="f" style="margin-top:0">';
+ h+='<div><small class="mu" style="font-weight:700;text-transform:uppercase;font-size:10px">Supervisor a cargo</small>';
+ h+='<select id="sup_select" onchange="sup=this.value;sv(false);draw()" style="margin-bottom:4px"><option value="">-- Seleccionar supervisor autorizado --</option>'+SUPERVISORES_AUTORIZADOS.map(n=>'<option'+(n===sup?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select>';
+ h+='<input id="sup" value="'+esc(sup)+'" placeholder="O escribe otro nombre..." oninput="sup=this.value;sv(false)"></div>';
+ h+='<div style="display:flex;align-items:flex-end"><button type="button" onclick="capturarGeoAuditoria()" title="Registrar coordenadas GPS para auditoría">📍 GPS Auditoría</button></div>';
+ h+='</div>';
 
  h+='<div style="margin:12px 0"><small class="mu" style="font-weight:700;text-transform:uppercase;font-size:10px">Nivel de Complejidad Técnico</small><div class="cmplx-group">';
  ['Baja','Media','Alta','Crítica'].forEach(lvl=>{
@@ -810,7 +850,28 @@ function goSf(k){sf=k;flt='all';tab='ev';cur=null;draw()}
 
 function lista(){
  const L=getFilteredList();
- return'<div class="c"><select id="pf" style="margin-bottom:8px" onchange="pf=this.value;try{localStorage.setItem(K+\'p\',pf)}catch(e){}draw()"><option value="">Todas las plantas</option>'+[...new Set(D.map(r=>r.pl))].sort().map(p=>'<option'+(p===pf?' selected':'')+'>'+esc(p)+'</option>').join('')+'</select><select id="sf" style="margin-bottom:8px" onchange="sf=this.value;if(sf)flt=\'all\';draw()">'+sfOpts()+'</select><input id="q" placeholder="Buscar por código de isométrico..." value="'+esc(q)+'" oninput="q=this.value;lst()"><div class="f" style="margin:8px 0 0"><button class="'+(flt==='pend'?'p':'')+'" onclick="flt=\'pend\';draw()">Sin evaluar</button><button class="'+(flt==='done'?'p':'')+'" onclick="flt=\'done\';draw()">Evaluados</button><button class="'+(flt==='work'?'p':'')+'" onclick="flt=\'work\';draw()">Por trabajar</button><button class="'+(flt==='all'?'p':'')+'" onclick="flt=\'all\';draw()">Todos</button></div><div class="sort-bar"><button class="'+(srt==='pr'?'p':'')+'" onclick="setSort(\'pr\')">Orden: Prioridad</button><button class="'+(srt==='mt'?'p':'')+'" onclick="setSort(\'mt\')">Mayor Metraje</button><button class="'+(srt==='dias'?'p':'')+'" onclick="setSort(\'dias\')">Más Antiguos</button></div><div class="mu" style="margin-top:8px;font-size:11px;font-weight:700;text-transform:uppercase">'+L.length+' isométricos listados'+(info?' · '+esc(info):'')+'</div><div class="l" id="ls">'+rows(L)+'</div></div>';
+ return'<div class="c">' +
+   '<select id="pf" style="margin-bottom:8px" onchange="pf=this.value;try{localStorage.setItem(K+\'p\',pf)}catch(e){}draw()"><option value="">Todas las plantas</option>'+[...new Set(D.map(r=>r.pl))].sort().map(p=>'<option'+(p===pf?' selected':'')+'>'+esc(p)+'</option>').join('')+'</select>' +
+   '<select id="sf" style="margin-bottom:8px" onchange="sf=this.value;if(sf)flt=\'all\';draw()">'+sfOpts()+'</select>' +
+   '<select id="flt_cmplx" style="margin-bottom:8px" onchange="fltCmplx=this.value;draw()">' +
+     '<option value="">Todas las complejidades</option>' +
+     ['Baja', 'Media', 'Alta', 'Crítica'].map(c => '<option value="'+c+'"'+(c===fltCmplx?' selected':'')+'>Complejidad: '+c+'</option>').join('') +
+   '</select>' +
+   '<input id="q" placeholder="Buscar por código de isométrico..." value="'+esc(q)+'" oninput="q=this.value;lst()">' +
+   '<div class="f" style="margin:8px 0 0">' +
+     '<button class="'+(flt==='pend'?'p':'')+'" onclick="flt=\'pend\';draw()">Sin evaluar</button>' +
+     '<button class="'+(flt==='done'?'p':'')+'" onclick="flt=\'done\';draw()">Evaluados</button>' +
+     '<button class="'+(flt==='work'?'p':'')+'" onclick="flt=\'work\';draw()">Por trabajar</button>' +
+     '<button class="'+(flt==='all'?'p':'')+'" onclick="flt=\'all\';draw()">Todos</button>' +
+   '</div>' +
+   '<div class="sort-bar">' +
+     '<button class="'+(srt==='pr'?'p':'')+'" onclick="setSort(\'pr\')">Orden: Prioridad</button>' +
+     '<button class="'+(srt==='mt'?'p':'')+'" onclick="setSort(\'mt\')">Mayor Metraje</button>' +
+     '<button class="'+(srt==='dias'?'p':'')+'" onclick="setSort(\'dias\')">Más Antiguos</button>' +
+   '</div>' +
+   '<div class="mu" style="margin-top:8px;font-size:11px;font-weight:700;text-transform:uppercase">'+L.length+' isométricos listados'+(info?' · '+esc(info):'')+'</div>' +
+   '<div class="l" id="ls">'+rows(L)+'</div>' +
+ '</div>';
 }
 
 function rows(L){
@@ -1306,7 +1367,6 @@ idb('g').then(v=>{
  }
 }).catch(()=>{});
 
-// Sincronización automática de red y Service Worker
 window.addEventListener('online', () => {
   console.log("Conexión recuperada: sincronizando datos pendientes.");
   draw();
