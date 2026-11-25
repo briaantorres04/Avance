@@ -1,8 +1,10 @@
 /* MÓDULO · SOLDADURA (reporte FR de Weld Console: solo juntas reportadas, sin universo total) */
 (function(g){const S=g.Suite,W=S.soldadura={d:{},w:{},p:{},info:''},AC=/ACCEPT|ACEPT/;
-W.parse=wb=>{const A=S.filas(wb.Sheets[wb.SheetNames[0]]),hi=A.findIndex(r=>r.some(c=>S.norm(c).toLowerCase()==='drawing no'));
- if(hi<0)throw new Error('No encontré la columna "Drawing No". Elige el reporte FR de Weld Console.');
- const H=A[hi].map(c=>S.norm(c).toLowerCase()),c=n=>H.indexOf(n),I={d:c('drawing no'),l:c('location'),f:c('fab date'),w:c('balance welders'),rp:c('repair'),pk:c('package number'),cm:c('commodity'),ln:c('line'),sh:c('sheet')},
+W.parse=wb=>{let A=[],hi=-1;
+ /* Busca el encabezado "Drawing No" en TODAS las hojas y en las primeras 40 filas; tolera variantes como "Drawing No." */
+ for(const n of wb.SheetNames){const B=S.filas(wb.Sheets[n]),h=B.slice(0,40).findIndex(r=>r.some(c=>/^drawing\s*(no|number)/.test(S.norm(c).toLowerCase())));if(h>=0){A=B;hi=h;break}}
+ if(hi<0){const B=S.filas(wb.Sheets[wb.SheetNames[0]]);throw new Error('No encontré la columna "Drawing No". Hojas del archivo: '+wb.SheetNames.join(', ')+'. Encabezados de la 1.ª hoja: '+((B[0]||[]).slice(0,8).map(c=>S.norm(c)).join(' | ')))}
+ const H=A[hi].map(c=>S.norm(c).toLowerCase()),c=n=>{const i=H.indexOf(n);return i>=0?i:H.findIndex(h=>h.startsWith(n))},I={d:c('drawing'),l:c('location'),f:c('fab date'),w:c('balance welders'),rp:c('repair'),pk:c('package number'),cm:c('commodity'),ln:c('line'),sh:c('sheet')},
  R=['vt result','rt results','pt result','ht result','pwht result'].map(c),d={},w={},p={};
  for(const r of A.slice(hi+1)){if(!r[I.d])continue;const k=S.cruce(r[I.d])||(I.cm>=0?[r[I.cm],r[I.ln],r[I.sh]].join('-'):null);if(!k)continue;
   const f=S.fecha(r[I.f]),t=d[k]=d[k]||{iso:String(r[I.d]),fw:0,sw:0,vt:0,rej:0,rep:0,last:''},rs=R.map(i=>i>=0?String(r[i]||'').toUpperCase():''),
