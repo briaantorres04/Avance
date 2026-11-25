@@ -533,6 +533,7 @@ details summary {
 <main id="m"></main>
 
 <script src="xlsx.full.min.js"></script>
+<script src="suite/core.js"></script><script src="suite/cambios.js"></script>
 <script>
 let D=[],info='',pf='',sf='',fltCmplx='',AL=3,EQ=[],QD=[],pa=null,pd='',SP={},spi='',unsaved=0,metaDia=120,srt='pr',spO={},SPC=[];
 const K='evalAlin1';let S={},sup='';
@@ -800,7 +801,7 @@ function panel(){
  
  const curCmplx = a ? (a.cmplx || 'Media') : ((S[cur.iso] && S[cur.iso].cmplx) || 'Media');
  
- let h='<div class="c"><b>'+esc(cur.iso)+'</b><div class="mu">'+esc(cur.pl)+' · Unidad '+esc(cur.un)+' · '+esc(cur.pr)+' · '+cur.sp+' spools · '+cur.mt+' m · '+dias(cur)+' días desde el último montaje</div>'+sblock(cur.iso);
+ let h='<div class="c"><b>'+esc(cur.iso)+'</b><div class="mu">'+esc(cur.pl)+' · Unidad '+esc(cur.un)+' · '+esc(cur.pr)+' · '+cur.sp+' spools · '+cur.mt+' m · '+dias(cur)+' días desde el último montaje</div>'+sblock(cur.iso)+(window.Suite?Suite.cambios.aviso(cur.iso,S[cur.iso]&&S[cur.iso].fecha):'');
  
  /* Selector libre de supervisor con listado completo y botón GPS */
  h+='<div class="f"><div style="flex:2"><small class="mu">Supervisor</small><select id="sup_select" style="margin-bottom:6px" onchange="sup=this.value;sv(false);draw()"><option value="">-- Seleccionar de la lista --</option>'+SUPERVISORES_AUTORIZADOS.map(n=>'<option'+(n===sup?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select><input id="sup" value="'+esc(sup)+'" placeholder="Nombre del supervisor" oninput="sup=this.value;sv(false)"></div><div style="display:flex;align-items:flex-end"><button type="button" onclick="capturarGeoAuditoria()">📍 GPS</button></div></div>';
@@ -1068,5 +1069,6 @@ $('fi').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)ret
 initTheme();
 idb('g').then(v=>{if(v&&v.d){SP=v.d;spi=v.i||'';applyChanges(false);try{if(alertas().length&&localStorage.getItem(K+'l')!==hoy()){localStorage.setItem(K+'l',hoy());tab='al'}}catch(e){}draw()}}).catch(()=>{});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+if(window.Suite)Suite.cambios.cargar().then(n=>{if(n)draw()}).catch(()=>{});
 draw();
 </script></body></html>
