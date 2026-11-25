@@ -50,5 +50,8 @@ C.vista=el=>{
  el.querySelector('#nf').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
   try{await C.importar(f)}catch(x){alert(x.message||'No se pudo leer el archivo.')}C.vista(el)};
 };
-Suite.mods.push({id:'cambios',nom:'Cambios de ingeniería',desc:'NCD y alertas de reevaluación',vista:C.vista,activo:true});
+/* NCD aprobadas después de la fecha de un dato, para un módulo; y tabla de alertas {llave:fecha} */
+C.nuevas=(k,mod,d)=>C.de(k).filter(x=>x.m.includes(mod)&&x.e&&d&&x.e>d).sort((a,b)=>b.e.localeCompare(a.e));
+C.alertasMod=(mod,F)=>Object.keys(F).map(k=>{const L=C.nuevas(k,mod,F[k]);return L.length?[k,F[k],L[0].n,L[0].e,L[0].t,L.length]:null}).filter(Boolean);
+Suite.mods.push({cargar:C.cargar,id:'cambios',nom:'Cambios de ingeniería',desc:'NCD y alertas de reevaluación',vista:C.vista,activo:true});
 })(typeof window!=='undefined'?window:globalThis);
