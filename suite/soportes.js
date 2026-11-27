@@ -1,15 +1,52 @@
-/* MÓDULO · SOPORTES (lee el checklist que ya cargas en la app de alineación con "Cargar soportes") */
-(function(g){const S=g.Suite,P=S.soportes={d:{},info:''};
-const EXC=['5S1','5S2','5LP','5DS2','5DS1','5ST','5DA1C','5DA2C','5DA3C'],isEx=c=>EXC.some(p=>String(c).toUpperCase().startsWith(p));
+/* MÓDULO · SOPORTES: áreas de oportunidad de instalación = lo montado que aún tiene soportes por instalar.
+   Cruza el checklist (cargado en la app de alineación) con el avance de montaje del módulo Montaje. */
+(function(g){const S=g.Suite,esc=S.esc,r0=v=>Math.round(v).toLocaleString('es-MX'),P=S.soportes={d:{},info:'',as:{},t:'res',un:'',es:'',fp:'',sel:''};
+if(typeof document!=='undefined'&&!document.getElementById('st-sop')){const s=document.createElement('style');s.id='st-sop';s.textContent='input,select{background:var(--s2);color:var(--tx);border:1px solid var(--bd);padding:8px;font:inherit;max-width:100%}.f2{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.f2 button{flex:1 1 120px}.stk{display:flex;height:14px;border:1px solid var(--bd);min-width:160px}.stk i{display:block}.fl{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:8px}';document.head.appendChild(s)}
+const EXC=['5S1','5S2','5LP','5DS2','5DS1','5ST','5DA1C','5DA2C','5DA3C'],isEx=c=>EXC.some(p=>String(c).toUpperCase().startsWith(p)),
+ ORD=['Instalar ahora','Montado sin material','Montaje parcial','Sin montar','Sin dato de montaje'];
 P.set=(sp,info)=>{P.info=info||'';P.d={};for(const key of Object.keys(sp)){const k=S.cruce(key)||key,it=sp[key].filter(x=>!(x[10]&&isEx(x[0])));if(!it.length)continue;
- const ok=x=>x[2]==='Instalado'||x[2]==='Liberado',pe=it.filter(x=>x[2]==='Pendiente');
- P.d[k]={iso:key,n:it.length,ok:it.filter(ok).length,pend:pe.length,mat:pe.filter(x=>x[7]).length,rech:it.filter(x=>x[2]==='Rechazado').length,ult:it.map(x=>S.fecha(x[11])).filter(Boolean).sort().pop()||''}}};
-P.cargar=async()=>{try{const v=await S.db('g','sp',null,'alinSop');if(v&&v.d)P.set(v.d,v.i)}catch(e){}return Object.keys(P.d).length};
-P.resumen=k=>{const x=P.d[k];return x?x.ok+' de '+x.n+' instalados · '+x.pend+' pendientes ('+x.mat+' con material recibido) · '+x.rech+' rechazados'+(x.ult?' · checklist al '+x.ult:''):''};
-P.vista=el=>{const L=Object.values(P.d),T=f=>L.reduce((a,x)=>a+x[f],0),F={};L.forEach(x=>{if(x.ult)F[S.cruce(x.iso)||x.iso]=x.ult});
+ const ok=x=>x[2]==='Instalado'||x[2]==='Liberado',po=it.filter(x=>!ok(x)),pe=it.filter(x=>x[2]==='Pendiente');
+ P.d[k]={k,iso:key,n:it.length,ok:it.length-po.length,por:po.length,pend:pe.length,mat:pe.filter(x=>x[7]).length,rech:it.filter(x=>x[2]==='Rechazado').length,ult:it.map(x=>S.fecha(x[11])).filter(Boolean).sort().pop()||'',pl:po.map(x=>x[0])}}};
+P.cargar=async()=>{try{const v=await S.db('g','sp',null,'alinSop');if(v&&v.d)P.set(v.d,v.i);const c=await S.db('g','soportes_cfg');if(c&&c.as)P.as=c.as}catch(e){}return Object.keys(P.d).length};
+P.guardar=()=>S.db('s','soportes_cfg',{as:P.as}).catch(()=>{});
+const MD=()=>(S.montaje&&S.montaje.d)||null;
+/* Estado de la oportunidad según el montaje del isométrico */
+P.cls=t=>{const m=MD()&&MD()[t.k];if(!m)return'Sin dato de montaje';if(m.e==='Montado')return t.mat+t.rech>0?'Instalar ahora':'Montado sin material';return m.nm>0?'Montaje parcial':'Sin montar'};
+P.resumen=k=>{const x=P.d[k];return x?x.ok+' de '+x.n+' instalados · por instalar '+x.por+' ('+x.mat+' con material recibido, '+x.rech+' rechazados) · '+P.cls(x)+(x.ult?' · checklist al '+x.ult:''):''};
+const td=v=>'<td>'+esc(v)+'</td>',tb=(t,H,R)=>'<div class="c"><b>'+t+'</b>'+(R.length?'<div class="tw"><table><tr>'+H.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+R.join('')+'</table></div>':'<p class="mu">Sin casos.</p>')+'</div>',
+ btn=(a,l,x,p)=>'<button '+(p?'class="p" ':'')+'data-a="'+a+'" '+(x||'')+'>'+l+'</button>',un=t=>{const m=MD()&&MD()[t.k];return m?m.un:'—'};
+P.res=()=>{const L=Object.values(P.d),U={},C={},F={},sum=f=>L.reduce((a,t)=>a+f(t),0),lis=t=>P.cls(t)==='Instalar ahora'?t.mat+t.rech:0;
+ L.forEach(t=>{const u=U[un(t)]=U[un(t)]||{n:0,rq:0,ok:0,por:0,li:0,bl:0},c=P.cls(t);u.n+=t.por>0?1:0;u.rq+=t.n;u.ok+=t.ok;u.por+=t.por;u.li+=lis(t);if(c==='Montado sin material'||c==='Instalar ahora')u.bl+=t.por-lis(t);
+  if(t.por>0){const x=C[c]=C[c]||[0,0];x[0]++;x[1]+=t.por}if(t.ult)F[t.k]=t.ult});
  const A=S.cambios.alertasMod('soportes',F);
- el.innerHTML=S.cab('Soportes',P.info||'',null)+(L.length?'<div class="kp">'+S.kp('Isométricos',L.length)+S.kp('Soportes requeridos',T('n'))+S.kp('Instalados o liberados',T('ok'),'ok')+S.kp('Pendientes',T('pend'),'wa')+S.kp('Pendientes con material',T('mat'),'wa')+S.kp('Rechazados',T('rech'),T('rech')?'er':'ok')+S.kp('Revisar por NCD',A.length,A.length?'er':'ok')+'</div>'+
- S.tabla('Por instalar con material ya recibido',['Isométrico','Pendientes','Con material','Rechazados','Checklist al'],L.filter(x=>x.mat>0).sort((a,b)=>b.mat-a.mat).map(x=>[x.iso,x.pend,x.mat,x.rech,x.ult||'—']))+
- S.tabla('Checklist anterior a una NCD aprobada · revisar',['Isométrico','Checklist al','Última NCD','Emisión','Cambio','NCD'],A):'<div class="c mu">Sin datos de soportes en este dispositivo. En la app de alineación usa “Cargar soportes” con el CSV del checklist y vuelve aquí.</div>')};
-S.mods.push({id:'soportes',nom:'Soportes',desc:'Checklist, pendientes y NCD',vista:P.vista,cargar:P.cargar,resumen:P.resumen});
+ return(MD()?'':'<div class="c wa">Sin avance de montaje: carga el avance en el módulo Montaje para saber qué isométricos ya están montados.</div>')+
+ '<div class="kp">'+S.kp('Isométricos con soportes',L.length)+S.kp('Soportes requeridos',sum(t=>t.n))+S.kp('Instalados',sum(t=>t.ok),'ok')+S.kp('Por instalar',sum(t=>t.por),'wa')+S.kp('Instalar ahora',sum(lis),'wa')+S.kp('Montado sin material',Object.values(U).reduce((a,u)=>a+u.bl,0),'er')+S.kp('Rechazados',sum(t=>t.rech),sum(t=>t.rech)?'er':'ok')+S.kp('Revisar por NCD',A.length,A.length?'er':'ok')+'</div>'+
+ '<div class="c"><b>Soportes por unidad</b><div class="mu">Verde: instalado · Amarillo: montado con material, listo para instalar · Rojo: resto por instalar</div><div class="tw"><table><tr><th>Unidad</th><th>Isométricos con pendientes</th><th>Requeridos</th><th>Instalados</th><th></th><th>Por instalar</th><th>Instalar ahora</th><th>Montado sin material</th></tr>'+
+ Object.keys(U).sort().map(k=>{const u=U[k],p=v=>Math.round(100*v/(u.rq||1));return'<tr>'+td(k)+td(u.n)+td(u.rq)+td(u.ok)+'<td><div class="stk"><i style="width:'+p(u.ok)+'%;background:var(--ok)"></i><i style="width:'+p(u.li)+'%;background:var(--wa)"></i><i style="flex:1;background:var(--er);opacity:.55"></i></div></td>'+td(u.por)+td(u.li)+td(u.bl)+'</tr>'}).join('')+'</table></div></div>'+
+ tb('Oportunidades por estado del montaje',['Estado','Isométricos','Soportes por instalar'],ORD.filter(c=>C[c]).map(c=>'<tr>'+td(c)+td(C[c][0])+td(C[c][1])+'</tr>'))+
+ S.tabla('Checklist anterior a una NCD aprobada · revisar',['Isométrico','Checklist al','Última NCD','Emisión','Cambio','NCD'],A.map(x=>[P.d[x[0]].iso,...x.slice(1)]))};
+P.opo=()=>{const L=Object.values(P.d).filter(t=>t.por>0),us=[...new Set(L.map(un))].sort(),pr=t=>{const m=MD()&&MD()[t.k];return m?m.pr:''},
+ O=L.filter(t=>(!P.un||un(t)===P.un)&&(!P.es||P.cls(t)===P.es)).sort((a,b)=>ORD.indexOf(P.cls(a))-ORD.indexOf(P.cls(b))||(b.mat+b.rech)-(a.mat+a.rech)||pr(a).localeCompare(pr(b))),
+ e=P.sel&&P.d[P.sel],pl=((S.montaje&&S.montaje.eq)||[]).filter(x=>x.tp==='Plataforma'&&x.est!=='Mantenimiento'),a0=P.as[P.sel]||{};
+ return'<div class="c"><div class="fl"><label class="mu">Unidad<br><select data-c="un"><option value="">Todas</option>'+us.map(u=>'<option'+(u===P.un?' selected':'')+'>'+esc(u)+'</option>').join('')+'</select></label><label class="mu">Estado<br><select data-c="es"><option value="">Todos</option>'+ORD.map(o=>'<option'+(o===P.es?' selected':'')+'>'+o+'</option>').join('')+'</select></label></div><div class="mu" style="margin-top:6px">Instalar ahora = isométrico 100 % montado con soportes por instalar que ya tienen material recibido (o rechazados por reinstalar).</div></div>'+
+ (e?'<div class="c" style="border-color:var(--ac)"><b>Asignar '+esc(e.iso)+'</b><div class="fl"><label class="mu">Fecha<br><input id="as_f" type="date" value="'+(a0.f||P.fp||S.hoy())+'"></label><label class="mu">Plataforma<br><select id="as_pl"><option value="">Sin plataforma</option>'+pl.map(x=>'<option value="'+x.id+'"'+(a0.pl===x.id?' selected':'')+'>'+esc(x.nom)+(x.c?' · '+x.c+' m':'')+'</option>').join('')+'</select></label><label class="mu">Cuadrilla<br><input id="as_cu" value="'+esc(a0.cu||'')+'" placeholder="Opcional"></label>'+btn('guardar','Asignar','',1)+btn('cancel','Cancelar')+'</div></div>':'')+
+ tb('Soportes por instalar ('+O.length+' isométricos)',['Isométrico','Prior.','Estado','Por instalar','Con material','Sin material','Rechazados','Soportes','Asignado',''],O.slice(0,300).map(t=>{const a=P.as[t.k];return'<tr>'+td(t.iso)+td(pr(t))+td(P.cls(t))+td(t.por)+td(t.mat)+td(t.pend-t.mat)+td(t.rech)+'<td style="white-space:normal">'+esc(t.pl.slice(0,6).join(', ')+(t.pl.length>6?'…':''))+'</td>'+td(a?a.f:'—')+'<td>'+btn('asig','Asignar','data-k="'+esc(t.k)+'"')+'</td></tr>'}))};
+P.prg=()=>{const f=P.fp||S.hoy(),L=Object.keys(P.as).filter(k=>P.as[k].f===f&&P.d[k]),use={},nm=id=>((S.montaje&&S.montaje.eq)||[]).find(x=>x.id===id),ma=Object.values((S.montaje&&S.montaje.as)||{});
+ L.forEach(k=>{const id=P.as[k].pl;if(id)(use[id]=use[id]||[]).push(k)});
+ return'<div class="c"><div class="fl"><label class="mu">Día<br><input type="date" data-c="fp" value="'+f+'"></label>'+btn('share','Compartir programa','',1)+'</div><div class="mu" style="margin-top:6px">'+L.length+' isométricos · '+L.reduce((a,k)=>a+P.d[k].por,0)+' soportes por instalar</div></div>'+
+ tb('Actividades del día',['Isométrico','Unidad','Soportes','Plataforma','Cuadrilla',''],L.map(k=>{const a=P.as[k],t=P.d[k],e=a.pl&&nm(a.pl),w=[use[a.pl]&&use[a.pl].length>1?'⚠ compartida con '+(use[a.pl].length-1)+' iso(s)':'',a.pl&&ma.some(x=>x.f===f&&x.pl===a.pl)?'⚠ también asignada en Montaje':''].filter(Boolean);
+  return'<tr>'+td(t.iso)+td(un(t))+td(t.por)+td((e?e.nom:'—')+(w.length?' · '+w.join(' · '):''))+td(a.cu||'—')+'<td>'+btn('quitar','Quitar','data-k="'+esc(k)+'"')+'</td></tr>'}))};
+P.share=()=>{const f=P.fp||S.hoy(),nm=id=>(((S.montaje&&S.montaje.eq)||[]).find(x=>x.id===id)||{}).nom||'sin plataforma';let t='Programa de soportes '+f+'\n';
+ Object.keys(P.as).filter(k=>P.as[k].f===f&&P.d[k]).forEach(k=>{const a=P.as[k],d=P.d[k];t+='\n• '+d.iso+' · '+d.por+' soportes · '+nm(a.pl)+(a.cu?' · '+a.cu:'')});
+ if(navigator.share)navigator.share({text:t}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>alert('Programa copiado.'));else prompt('Copia el programa:',t)};
+P.acc=(a,b,el)=>{const q=i=>el.querySelector(i);
+ if(a==='tab')P.t=b.t;else if(a==='asig')P.sel=b.k;else if(a==='cancel')P.sel='';
+ else if(a==='guardar'){const f=q('#as_f').value||S.hoy();P.as[P.sel]={f,pl:q('#as_pl').value,cu:q('#as_cu').value.trim()};P.sel='';P.fp=f;P.guardar()}
+ else if(a==='quitar'){delete P.as[b.k];P.guardar()}else if(a==='share'){P.share();return}
+ P.vista(el)};
+P.vista=el=>{const L=Object.values(P.d),tabs=[['res','Resumen'],['opo','Oportunidades'],['prg','Programa']];
+ el.innerHTML=S.cab('Soportes',P.info||'',null)+(L.length?'<div class="f2">'+tabs.map(t=>btn('tab',t[1],'data-t="'+t[0]+'"',P.t===t[0])).join('')+'</div>'+({res:P.res,opo:P.opo,prg:P.prg}[P.t]||P.res)():'<div class="c mu">Sin datos de soportes en este dispositivo. En la app de alineación usa “Cargar soportes” con el CSV del checklist y vuelve aquí.</div>');
+ el.onclick=e=>{const b=e.target.closest('[data-a]');if(b)P.acc(b.dataset.a,b.dataset,el)};
+ el.onchange=e=>{const t=e.target,c=t.dataset.c;if(!c)return;if(c==='un')P.un=t.value;else if(c==='es')P.es=t.value;else if(c==='fp')P.fp=t.value||S.hoy();P.vista(el)}};
+S.mods.push({id:'soportes',nom:'Soportes',desc:'Oportunidades de instalación en lo montado',vista:P.vista,cargar:P.cargar,resumen:P.resumen});
 })(typeof window!=='undefined'?window:globalThis);
