@@ -25,10 +25,10 @@ td{font-family:Consolas,monospace}
 </style></head><body>
 <header><h1>Suite de supervisión</h1><button id="th">Cambiar tema</button></header>
 <main><nav id="nv"></nav><div id="v"></div></main>
-<script src="../xlsx.full.min.js"></script><script src="core.js"></script><script src="cambios.js"></script><script src="montaje.js"></script><script src="soportes.js"></script><script src="soldadura.js"></script><script src="consulta.js"></script>
+<script src="../xlsx.full.min.js"></script><script src="core.js"></script><script src="cambios.js"></script><script src="montaje.js"></script><script src="soportes.js"></script><script src="soldadura.js"></script><script src="paquetes.js"></script><script src="consulta.js"></script>
 <script>
 /* Módulos aún sin construir: aparecen en el menú para fijar la estructura */
-[['alineacion','Alineación','App actual de isométricos','../index.html'],['paquetes','Paquetes de prueba','Pendiente: embudo y fronteras'],['materiales','Materiales','Pendiente: spoolgen y allocation']]
+[['alineacion','Alineación','App actual de isométricos','../index.html'],['materiales','Materiales','Pendiente: spoolgen y allocation']]
  .forEach(m=>Suite.mods.push({id:m[0],nom:m[1],desc:m[2],href:m[3]}));
 try{document.documentElement.dataset.theme=localStorage.getItem('evalAlin1_theme')||'dark'}catch(e){}
 $th=document.getElementById('th');$th.onclick=()=>{const t=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=t;try{localStorage.setItem('evalAlin1_theme',t)}catch(e){}};
