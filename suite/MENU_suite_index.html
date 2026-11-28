@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c120e"><title>Suite de supervisión</title>
+<style>
+:root{--bg:#0c120e;--s:#131a15;--s2:#1a241e;--bd:#233128;--tx:#f1f5f2;--mu:#8b9e91;--ac:#d4f542;--on:#0c120e;--ok:#4ade80;--wa:#facc15;--er:#f87171;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root[data-theme=light]{--bg:#eaedea;--s:#fff;--s2:#f1f4f0;--bd:#cbd5cb;--tx:#0c120e;--mu:#4e5f53;--ac:#111a14;--on:#d4f542;--ok:#15803d;--wa:#a16207;--er:#b91c1c;color-scheme:light}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 -apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--s);border-bottom:1px solid var(--bd)}
+h1{margin:0;font-size:15px;font-weight:800}
+main{max-width:1200px;margin:auto;padding:16px 20px}
+.hm{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.hm a,.hm div.off{display:block;padding:16px;background:var(--s);border:1px solid var(--bd);border-top:3px solid var(--ac);color:var(--tx);text-decoration:none;min-height:112px;transition:background .15s}
+.hm a:hover{background:var(--s2)}.hm .off{border-top-color:var(--bd);color:var(--mu)}
+.hm i{font:normal 800 11px Consolas,monospace;color:var(--mu);letter-spacing:.06em}.hm b{display:block;font-size:17px;margin:6px 0 4px}.hm small{color:var(--mu);font-size:12px}
+.hm em{display:inline-block;margin-top:10px;font:normal 700 11px Consolas,monospace;text-transform:uppercase;color:var(--ac)}
+:root[data-theme=light] .hm em{color:var(--tx)}
+.hd{display:flex;align-items:center;gap:10px}.hd h1{flex:1}
+.bk{text-decoration:none;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;font-weight:800;font-size:12px;text-transform:uppercase;border:1px solid var(--ac);background:var(--ac);color:var(--on)}
+header{position:sticky;top:0;z-index:20}
+.sub{font-size:11px;color:var(--mu);font-weight:600}
+.c{background:var(--s);border:1px solid var(--bd);padding:16px;margin-bottom:14px}
+.mu{color:var(--mu)}.ok{color:var(--ok)}.wa{color:var(--wa)}.er{color:var(--er)}
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.kp .c{margin:0;border-top:3px solid var(--bd)}.kp .c.ok{border-top-color:var(--ok)}.kp .c.wa{border-top-color:var(--wa)}.kp .c.er{border-top-color:var(--er)}
+.kp span{display:block;font-size:11px}.kp b{font:800 30px Consolas,monospace}
+button{font-family:inherit;font-weight:700;font-size:12px;padding:10px 14px;min-height:44px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer}
+button.p{background:var(--ac);color:var(--on);border-color:var(--ac)}
+.tw{overflow-x:auto;border:1px solid var(--bd);margin-top:10px}table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap}th{background:var(--s2);color:var(--mu);font-size:11px}
+td{font-family:Consolas,monospace}
+</style></head><body>
+<header><div class="hd" style="flex:1"><a id="bk" class="bk" href="#" style="display:none">← Suite</a><h1 id="tt">Suite de supervisión</h1></div><button id="th">Cambiar tema</button></header>
+<main><div id="hm" class="hm"></div><div id="v"></div></main>
+<script src="../xlsx.full.min.js"></script><script src="core.js"></script><script src="cambios.js"></script><script src="montaje.js"></script><script src="soportes.js"></script><script src="soldadura.js"></script><script src="paquetes.js"></script><script src="consulta.js"></script>
+<script>
+/* Módulos aún sin construir: aparecen en el menú para fijar la estructura */
+[['alineacion','Alineación','App actual de isométricos','../index.html'],['materiales','Materiales','Pendiente: spoolgen y allocation']]
+ .forEach(m=>Suite.mods.push({id:m[0],nom:m[1],desc:m[2],href:m[3]}));
+try{document.documentElement.dataset.theme=localStorage.getItem('evalAlin1_theme')||'dark'}catch(e){}
+$th=document.getElementById('th');$th.onclick=()=>{const t=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=t;try{localStorage.setItem('evalAlin1_theme',t)}catch(e){}};
+const ORD=['alineacion','montaje','soportes','soldadura','paquetes','cambios','consulta','materiales'];
+function go(){const id=(location.hash||'').slice(1),m=Suite.mods.find(x=>x.id===id&&x.vista),$=i=>document.getElementById(i);
+ $('bk').style.display=m?'inline-flex':'none';$('hm').style.display=m?'none':'grid';$('v').style.display=m?'block':'none';
+ $('tt').textContent=m?m.nom:'Suite de supervisión';document.title=m?m.nom+' · Suite':'Suite de supervisión';
+ if(m){$('v').innerHTML='';m.vista($('v'));window.scrollTo(0,0);return}
+ $('v').innerHTML='';
+ const L=Suite.mods.filter(x=>x.desc).sort((a,b)=>(ORD.indexOf(a.id)<0?99:ORD.indexOf(a.id))-(ORD.indexOf(b.id)<0?99:ORD.indexOf(b.id)));
+ $('hm').innerHTML=L.map((x,n)=>{const t='<i>'+String(n+1).padStart(2,'0')+'</i><b>'+Suite.esc(x.nom)+'</b><small>'+Suite.esc(x.desc)+'</small>';
+  return x.href?'<a href="'+x.href+'">'+t+'<br><em>Abrir app →</em></a>':x.vista?'<a href="#'+x.id+'">'+t+'<br><em>Abrir →</em></a>':'<div class="off">'+t+'<br><em style="color:var(--mu)">Próximamente</em></div>'}).join('')}
+addEventListener('hashchange',go);Promise.all(Suite.mods.filter(m=>m.cargar).map(m=>m.cargar())).then(go);
+</script></body></html>
